@@ -28,14 +28,14 @@
       rad('om.redigera', () => {
         const titel = el('input', { value: om.title, maxlength: 120 }), text = el('textarea', { maxlength: 20000 }); text.value = om.body;
         VL.openDialog(VL.t('om.redigera'), el('div', {}, el('div', { class: 'falt' }, el('label', { text: VL.t('red.titel') }), titel), el('div', { class: 'falt' }, el('label', { text: VL.t('red.berattelse') }), text)),
-          { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateAbout({ title: titel.value.trim() || 'Om oss', body: text.value }); await rita(); } });
+          { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateAbout({ title: titel.value.trim() || 'Om oss', body: text.value }); VL.notis && VL.notis.skicka('text', { title: titel.value.trim() || 'Om oss' }); await rita(); } });
       }),
       rad('om.byt_bild', () => {
         const fil = el('input', { type: 'file', accept: 'image/*' });
         VL.openDialog(VL.t('om.byt_bild'), fil, { okText: VL.t('red.spara'), onOk: async () => {
           if (!fil.files[0]) return;
           const p = await VL.media.processPhoto(fil.files[0]);   // metadata (GPS) bort
-          await VL.api.uploadAboutPhoto(p.full, om.photo_path); await rita();
+          await VL.api.uploadAboutPhoto(p.full, om.photo_path); VL.notis && VL.notis.skicka('bilder', { title: om.title || 'Om oss' }, 1); await rita();
         } });
       }),
       rad('meny.synlighet', () => {

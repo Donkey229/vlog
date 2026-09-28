@@ -34,7 +34,7 @@
   async function kategoriDialog() {
     const m = VL.minneSida.data;
     const val = kategoriVal(VL.minneSida.kategorier, (m.memory_categories || []).map(c => c.slug));
-    VL.openDialog(VL.t('meny.kategorier'), val.node, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.setCategories(m.id, val.valda()); await ladda(); } });
+    VL.openDialog(VL.t('meny.kategorier'), val.node, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.setCategories(m.id, val.valda()); VL.notis && VL.notis.skicka('andrat', m); await ladda(); } });
   }
 
   function framsteg() { const bar = el('i'); const text = el('p', { class: 'dampad' }); return { node: el('div', {}, el('div', { class: 'framsteg' }, bar), text), set: (i, n, t) => { bar.style.width = Math.round(100 * i / Math.max(1, n)) + '%'; text.textContent = t; } }; }
@@ -59,7 +59,7 @@
       falt('red.textpos', el('div', {}, valRad('textX', ['vanster', 'mitten', 'hoger'], null, v => VL.t('red.pos.' + v)), valRad('textY', ['topp', 'mitt', 'botten'], null, v => VL.t('red.pos.' + v)))),
       falt('red.fokus', el('div', {}, fx, fy)));
     uppd();
-    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); await ladda(); } });
+    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); VL.notis && VL.notis.skicka('text', { ...m, title: titel.value.trim() }); await ladda(); } });
   }
 
   function bildDialog() {
@@ -70,7 +70,7 @@
       el('button', { type: 'button', style: { left: '4px', right: 'auto' }, text: '♥', title: VL.t('meny.parbild'), onclick: async () => { await VL.api.updateSettings({ couple_path: x.thumb_path }); VL.toast(VL.t('admin.sparat')); } }))));
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
-    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); } await ladda(); } });
+    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
   }
 
   function datumDialog() {
@@ -97,6 +97,7 @@
       // bildernas dagar följer med (annars försvinner de ur galleriet och kalendern)
       for (const x of m.media) { const d = D.remapDay(x.day, m.start_date, ny.start, ny.slut); if (d !== x.day) await VL.api.setMediaDay(x.id, d); }
       if (valda.size) await VL.api.mergeInto(m, [...valda].map(id => ({ id })));
+      VL.notis && VL.notis.skicka('datum', m);
       await ladda(); } });
   }
 
@@ -107,7 +108,7 @@
     VL.openDialog(VL.t('meny.lank'), el('div', {}, lista, falt('red.lank', inp)), { okText: VL.t('red.spara'), onOk: async () => {
       if (!inp.value.trim()) return;
       const p = VL.links.parseLink(inp.value); if (!p) { VL.toast(VL.t('red.lank_ogiltig'), 'fel'); return false; }
-      await VL.api.addLink(m.id, p, m.links.length); await ladda(); } });
+      await VL.api.addLink(m.id, p, m.links.length); VL.notis && VL.notis.skicka('andrat', m); await ladda(); } });
   }
 
   function synlighetDialog() {
@@ -156,6 +157,7 @@
       }
       const kvar = [...filer.files].slice(klara), fore = klara;
       if (kvar.length) await laddaUpp(mem, kvar, fs.set, n => { klara = fore + n; });
+      if (VL.notis) await VL.notis.skicka('nytt', mem);   // väntar: sidbytet skulle annars avbryta anropet
       location.href = 'minne.html?id=' + mem.id; } });
   }
 

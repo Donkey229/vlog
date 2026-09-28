@@ -73,6 +73,7 @@
           klara += perDag[k].length;
         }
         bar.style.width = '100%'; text.textContent = VL.t('red.klart');
+        if (VL.notis && lista.length) VL.notis.skicka('bilder', null, lista.length);
       } catch (x) { fel(x); } finally { ev.target.disabled = false; }
     } })));
 

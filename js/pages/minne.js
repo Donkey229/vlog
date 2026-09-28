@@ -56,7 +56,7 @@
     const gillat = jag && data.likes.some(l => l.user_id === jag);
     const omLadda = async () => { await ladda(); rita(); };
     kropp.append(el('div', { class: 'socialt' },
-      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }), onclick: async () => { try { await VL.api.toggleLike(data.id, !gillat); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
+      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }), onclick: async () => { try { await VL.api.toggleLike(data.id, !gillat); if (!gillat && VL.notis) VL.notis.skicka('gilla', data); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
            : el('span', { text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }) }),
       el('span', { text: '💬 ' + data.comments.filter(c => c.status === 'approved').length })));
     data.comments.forEach(c => {
@@ -81,6 +81,7 @@
       try {
         await VL.api.addComment(data.id, t, n, kanRedigera);
         text.value = '';
+        if (kanRedigera && VL.notis) VL.notis.skicka('kommentar', data);
         if (kanRedigera) await omLadda(); else VL.toast(VL.t('minne.kommentar_skickad'));
       } catch (e) { VL.toast(/för många|too many/i.test(e.message) ? VL.t('fel.spam') : (e.message || VL.t('fel.allmant')), 'fel'); }
     } }, prof ? null : namn, text, honung, el('button', { class: 'knapp', text: VL.t('minne.skicka') })));
