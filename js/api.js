@@ -139,12 +139,15 @@
       throw e;
     }
   }
-  async function removeMedia(row) {
-    const paths = [row.path, row.thumb_path, row.poster_path].filter(Boolean);
+  // Tar bort filerna i lagringen först (rättigheten följer bildraden), sedan raderna – en eller många på en gång.
+  async function removeMediaMany(rows) {
+    if (!rows.length) return;
+    const paths = rows.flatMap(r => [r.path, r.thumb_path, r.poster_path]).filter(Boolean);
     must(await sb.storage.from('media').remove(paths));
-    must(await sb.from('media').delete().eq('id', row.id));
+    must(await sb.from('media').delete().in('id', rows.map(r => r.id)));
     await clearCouplePathIf(paths);
   }
+  const removeMedia = row => removeMediaMany([row]);
   const setCover = async (memoryId, mediaId) => updateMemory(memoryId, { cover_media_id: mediaId });
   const setMediaDay = async (id, day) => must(await sb.from('media').update({ day }).eq('id', id));
   // Slå ihop i databasen (allt eller inget): bilder, länkar, kommentarer, gilla, kategorier och text flyttas till target.
@@ -198,7 +201,7 @@
   const taBortPrenumeration = async endpoint => must(await sb.from('push_subscriptions').delete().eq('endpoint', endpoint));
   const notis = async (text, url) => { const { error } = await sb.functions.invoke('notis', { body: { text, url } }); if (error) throw error; };
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
-    createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, setCover, setMediaDay, mergeInto, addLink, removeLink,
+    createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
     about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
 })(window.VL);

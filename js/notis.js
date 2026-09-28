@@ -4,7 +4,7 @@ window.VL = window.VL || {};
 (function (VL) {
   const FRAGAT = 'vl-notis-fragat';
   function text({ namn, typ, antal, titel }) {
-    const k = typ === 'bilder' ? (antal === 1 ? 'notis.bild' : 'notis.bilder') : 'notis.' + typ;
+    const k = typ === 'bilder' ? (antal === 1 ? 'notis.bild' : 'notis.bilder') : typ === 'bort' && antal === 1 ? 'notis.bort_en' : 'notis.' + typ;
     return VL.t(k, { namn: namn || '?', n: antal, titel: titel || VL.t('notis.vloggen') }).slice(0, 140);
   }
   // base64url → Uint8Array (applicationServerKey)
