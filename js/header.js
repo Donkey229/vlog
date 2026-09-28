@@ -24,6 +24,7 @@
       onclick: async () => { VL.setLang(l); if (prof) await VL.api.updateProfile({ lang: l }); location.reload(); } })));
     const redaktor = prof && ['admin', 'editor'].includes(prof.role);
     const right = el('div', { class: 'top__hoger' }, sok, tema, lang,
+      redaktor ? el('span', { id: 'narvaro', class: 'narvaro' }) : null,   // partnerns profil + grön prick när hon/han är inne
       prof ? el('button', { type: 'button', class: 'av', title: prof.display_name, 'aria-haspopup': 'menu', text: initials(prof.display_name), onclick: ev => profilMeny(ev.currentTarget) }) : null,
       redaktor ? el('a', { class: 'knapp', href: 'index.html?nytt=1', text: VL.t('nav.nytt') }) : null,
       prof && prof.role === 'admin' ? el('a', { class: 'lank', href: 'admin.html', text: VL.t('nav.admin') }) : null,
@@ -33,8 +34,9 @@
       VL.openDialog(VL.t('red.titel_sida'), el('div', { class: 'falt' }, inp), { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateSettings({ title: inp.value.trim() || 'Emma & Jock' }); location.reload(); } });
     } }) : null;
     VL.add(top, par, titelKnapp, el('nav', { class: 'flikar', 'aria-label': VL.t('nav.meny') },
-      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('om', 'nav.om', 'om.html')), right);
+      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), tab('om', 'nav.om', 'om.html')), right);
     VL.renderFooter(s);
+    if (redaktor && VL.narvaro) VL.api.profiles().then(p => VL.narvaro.starta(prof, p)).catch(() => {});
     return s;
   };
 
@@ -42,7 +44,11 @@
   function profilMeny(knapp) {
     const gammal = document.getElementById('profilmeny'); if (gammal) { gammal.remove(); return; }
     const ut = async scope => { await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
+    // Platsdelning är frivillig och av som standard; bara medan appen är öppen, sparas aldrig.
+    const plats = VL.narvaro && VL.el('button', { type: 'button', role: 'menuitem', text: VL.t(VL.narvaro.delar() ? 'narvaro.dela_av' : 'narvaro.dela_pa'), onclick: () => {
+      const pa = !VL.narvaro.delar(); VL.narvaro.satDela(pa); if (pa) VL.toast(VL.t('narvaro.delar_nu')); m.remove(); } });
     const m = VL.el('div', { id: 'profilmeny', class: 'meny meny--profil', role: 'menu' },
+      document.getElementById('narvaro') ? plats : null,
       VL.el('button', { type: 'button', role: 'menuitem', text: VL.t('nav.logga_ut'), onclick: () => ut('local') }),
       VL.el('button', { type: 'button', role: 'menuitem', class: 'fara', text: VL.t('nav.logga_ut_alla'), onclick: () => ut('global') }));
     knapp.parentNode.append(m); m.querySelector('button').focus();

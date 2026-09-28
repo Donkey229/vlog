@@ -4,7 +4,7 @@
   VL.sb = sb;
   const must = ({ data, error }) => { if (error) throw error; return data; };
   const uuid = () => crypto.randomUUID();
-  const HEAD = 'id,title,kind,start_date,end_date,visibility,cover_media_id,created_by';
+  const HEAD = 'id,title,kind,start_date,end_date,visibility,cover_media_id,created_by,place';
   const CATS = 'memory_categories(slug)';
   const byStart = (a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0);
 
@@ -51,13 +51,17 @@
     });
   }
   // Senaste inläggen, valfritt bara en kategori.
-  async function recent(n, kat, baraResor = false) {
+  // ilike utan jokertecken = samma plats oavsett versaler
+  const exakt = t => String(t).replace(/[\\%_]/g, c => '\\' + c);
+  async function recent(n, kat, baraResor = false, plats = null) {
     let q = sb.from('memories').select(HEAD + (kat ? ',memory_categories!inner(slug)' : ',' + CATS));
     if (kat) q = q.eq('memory_categories.slug', kat);
     if (baraResor) q = q.neq('kind', 'dag');
+    if (plats) q = q.ilike('place', exakt(plats.trim()));
     const rows = must(await q.order('start_date', { ascending: false }).limit(n));
     return withThumbs(rows);
   }
+  const platsRader = async () => must(await sb.from('memories').select('place').neq('place', ''));
   async function search(q) { return withThumbs(must(await sb.rpc('search_memories', { q }))); }
   // Minnen som täcker dagen k (för importen – se VL.dates.valjImportMinne). media behövs för sorteringsordningen.
   const importKandidater = async (k) => must(await sb.from('memories').select('id,kind,start_date,end_date,cover_media_id,media!media_memory_id_fkey(id)')
@@ -110,7 +114,7 @@
   }
   // Kopia som mall: text, stil, kategorier och länkar – inte bilder. Alltid privat.
   async function duplicateMemory(m) {
-    const kopia = await createMemory({ kind: m.kind, title: (m.title + ' ' + VL.t('meny.kopia')).trim().slice(0, 120), story: m.story, style: m.style, start_date: m.start_date, end_date: m.end_date, visibility: 'private' });
+    const kopia = await createMemory({ kind: m.kind, title: (m.title + ' ' + VL.t('meny.kopia')).trim().slice(0, 120), place: m.place || '', story: m.story, style: m.style, start_date: m.start_date, end_date: m.end_date, visibility: 'private' });
     await setCategories(kopia.id, (m.memory_categories || []).map(c => c.slug));
     for (const [i, l] of (m.links || []).entries()) must(await sb.from('links').insert({ memory_id: kopia.id, platform: l.platform, url: l.url, embed_url: l.embed_url, sort: i }));
     return kopia;
@@ -179,7 +183,7 @@
     return name;
   }
   // profiler, lagring, logg, admin
-  async function profiles() { const { data } = await sb.from('profiles').select('id,display_name,avatar_path'); const map = {}; (data || []).forEach(p => map[p.id] = p); return map; }
+  async function profiles() { const { data } = await sb.from('profiles').select('id,display_name,avatar_path,role'); const map = {}; (data || []).forEach(p => map[p.id] = p); return map; }
   async function updateProfile(patch) { const { data: { user } } = await sb.auth.getUser(); must(await sb.from('profiles').update(patch).eq('id', user.id)); }
   async function uploadAvatar(blob) { const { data: { user } } = await sb.auth.getUser(); const name = `avatars/${user.id}.jpg`; must(await sb.storage.from('media').upload(name, blob, { contentType: 'image/jpeg', upsert: true })); await updateProfile({ avatar_path: name }); return name; }
   async function storageUsedMB() { const rows = must(await sb.from('media').select('bytes')); return Math.round(rows.reduce((s, r) => s + Number(r.bytes || 0), 0) / 1048576); }
@@ -189,7 +193,7 @@
     if (error) { let msg = error.message; try { msg = (await error.context.json()).fel || msg; } catch (e) {} throw new Error(msg); }
     return data;
   }
-  VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, search, popular, related, memory,
+  VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
     createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
     about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart };
