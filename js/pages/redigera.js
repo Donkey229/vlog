@@ -42,6 +42,7 @@
   function stilDialog() {
     const m = VL.minneSida.data; const s = VL.style.normalizeStyle(m.style);
     const titel = el('input', { value: m.title, maxlength: 120 }), story = el('textarea', { maxlength: 20000 }); story.value = m.story;
+    const platsFalt = el('input', { value: m.place || '', maxlength: 80, placeholder: VL.t('red.plats') });
     const prevBild = m.media.find(x => x.kind === 'photo');
     const prev = el('div', { class: 'block forhands' }, el('div', { class: 'block__bild' }, prevBild ? el('img', { src: VL.minneSida.urls[prevBild.thumb_path], 'data-roll': 'bild', alt: '' }) : null), el('div', { class: 'block__text' }, el('h2', { class: 'block__titel', 'data-roll': 'titel' }), el('p', { class: 'block__berattelse', 'data-roll': 'text' })));
     const uppd = () => { prev.querySelector('[data-roll=titel]').textContent = titel.value || '—'; prev.querySelector('[data-roll=text]').textContent = story.value.slice(0, 160); VL.style.applyStyle(prev, s); };
@@ -51,14 +52,14 @@
     const fx = el('input', { type: 'range', min: 0, max: 100, value: s.focusX, oninput: e => { s.focusX = Number(e.target.value); uppd(); } });
     const fy = el('input', { type: 'range', min: 0, max: 100, value: s.focusY, oninput: e => { s.focusY = Number(e.target.value); uppd(); } });
     titel.oninput = story.oninput = uppd;
-    const body = el('div', {}, prev, falt('red.titel', titel), falt('red.berattelse', story),
+    const body = el('div', {}, prev, falt('red.titel', titel), falt('red.plats', platsFalt), falt('red.berattelse', story),
       falt('red.layout', valRad('layout', VL.style.LAYOUTS, null, v => VL.t('red.layout.' + v))),
       falt('red.farg', el('div', { class: 'val' }, farger.map(c => { const b = el('button', { type: 'button', class: 'farg' + (s.color === c ? ' pa' : ''), style: { background: c }, 'aria-label': c, onclick: () => { s.color = c; b.parentNode.querySelectorAll('.farg').forEach(x => x.classList.remove('pa')); b.classList.add('pa'); uppd(); } }); return b; }))),
       falt('red.storlek', storlek), falt('red.typsnitt', valRad('font', Object.keys(VL.style.FONTS), null, v => VL.t('red.font.' + v))),
       falt('red.textpos', el('div', {}, valRad('textX', ['vanster', 'mitten', 'hoger'], null, v => VL.t('red.pos.' + v)), valRad('textY', ['topp', 'mitt', 'botten'], null, v => VL.t('red.pos.' + v)))),
       falt('red.fokus', el('div', {}, fx, fy)));
     uppd();
-    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); await ladda(); } });
+    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); await ladda(); } });
   }
 
   function bildDialog() {
@@ -136,7 +137,7 @@
     const katVal = kategoriVal(await VL.api.categories(), []);
     const typ = el('select', {}, ['dag', 'resa', 'utflykt'].map(k => el('option', { value: k, text: VL.t('typ.' + k) })));
     const start = el('input', { type: 'date', value: D.todayKey(), required: true }), slut = el('input', { type: 'date' });
-    const titel = el('input', { maxlength: 120 }), story = el('textarea', { maxlength: 20000 });
+    const titel = el('input', { maxlength: 120 }), story = el('textarea', { maxlength: 20000 }), platsFalt = el('input', { maxlength: 80, placeholder: VL.t('red.plats') });
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
     filer.onchange = async () => { // föreslå datum från första filen: EXIF > filnamn > filtid
@@ -146,10 +147,10 @@
       if (cd.date) start.value = D.dayKey(cd.date);
     };
     let mem = null, klara = 0;   // om något går fel och man trycker Spara igen: fortsätt, skapa inte ett nytt minne
-    VL.openDialog(VL.t('nav.nytt'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), falt('red.titel', titel), falt('red.berattelse', story), falt('meny.kategorier', katVal.node), falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
+    VL.openDialog(VL.t('nav.nytt'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), falt('red.titel', titel), falt('red.plats', platsFalt), falt('red.berattelse', story), falt('meny.kategorier', katVal.node), falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
       if (slut.value && slut.value < start.value) { VL.toast(VL.t('red.slut'), 'fel'); return false; }
       if (!mem) {
-        mem = await VL.api.createMemory({ kind: typ.value, start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null, title: titel.value.trim(), story: story.value, visibility: 'private' });
+        mem = await VL.api.createMemory({ kind: typ.value, start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null, title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, visibility: 'private' });
         mem.media = [];
         await VL.api.setCategories(mem.id, katVal.valda());
       }

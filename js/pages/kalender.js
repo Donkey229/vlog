@@ -3,7 +3,7 @@
   const D = VL.dates, el = VL.el;
   const prof = await VL.guard({ allowAnon: true });
   const q = new URLSearchParams(location.search);
-  const vy = ['kalender', 'tidslinje', 'resor', 'sok'].includes(q.get('vy')) ? q.get('vy') : 'kalender';
+  const vy = ['kalender', 'tidslinje', 'resor', 'platser', 'sok'].includes(q.get('vy')) ? q.get('vy') : 'kalender';
   VL.applyI18n();
   await VL.renderHeader(prof, vy === 'sok' ? '' : vy);
   const main = document.getElementById('innehall');
@@ -16,6 +16,7 @@
     el('div', {},
       el('small', { text: D.formatRange(r.start_date, r.end_date) + ' · ' + ((r.memory_categories || []).map(c => katNamn(c.slug)).filter(Boolean).join(', ') || VL.t('typ.' + r.kind)) + (r.likes ? ' · ♥ ' + r.likes : '') }),
       el('h3', { text: r.title || '—' }),
+      r.place ? el('small', { class: 'plats', text: '📍 ' + r.place }) : null,
       personer[r.created_by] ? el('small', { class: 'av', text: VL.t('minne.skrivet_av', { namn: personer[r.created_by].display_name }) }) : null))));
   const tomt = () => el('p', { class: 'tomlage', text: VL.t('kal.tom') });
   const antal = Math.min(600, Math.max(60, parseInt(q.get('antal'), 10) || 60));
@@ -65,12 +66,20 @@
     main.append(el('h1', { class: 'stor', text: VL.t('sok.rubrik', { q: term }) }), rader.length ? kortLista(rader) : el('p', { class: 'tomlage', text: VL.t(term.length >= 2 ? 'sok.inga' : 'sok.kort') }));
   } else if (vy === 'tidslinje') {
     const kat = kategorier.some(k => k.slug === q.get('kat')) ? q.get('kat') : null;
-    const rader = await VL.api.recent(antal, kat);
+    const plats = (q.get('plats') || '').trim().slice(0, 80) || null;
+    const rader = await VL.api.recent(antal, kat, false, plats);
     VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.tidslinje') }),
+      plats ? el('div', { class: 'chips', style: { marginTop: '14px' } }, el('a', { class: 'pa', href: 'index.html?vy=platser', text: VL.t('platser.filter', { plats }) + ' ×' })) : null,
       el('div', { class: 'chips', style: { marginTop: '14px' } },
         el('a', { class: kat ? '' : 'pa', href: 'index.html?vy=tidslinje', text: VL.t('kat.alla') }),
         kategorier.map(k => el('a', { class: kat === k.slug ? 'pa' : '', href: 'index.html?vy=tidslinje&kat=' + k.slug, text: VL.api.catName(k) }))),
       rader.length ? kortLista(rader) : tomt(), visaFler(rader));
+  } else if (vy === 'platser') {
+    const lista = VL.platser.lista(await VL.api.platsRader());
+    VL.add(main, el('h1', { class: 'stor', text: VL.t('platser.rubrik') }),
+      lista.length ? el('div', { class: 'platslista' }, lista.map(p => el('a', { href: 'index.html?vy=tidslinje&plats=' + encodeURIComponent(p.plats) },
+        el('strong', { text: '📍 ' + p.plats }), el('small', { text: VL.t('platser.minnen', { n: p.antal }) }))))
+        : el('p', { class: 'tomlage', text: VL.t('platser.tom') }));
   } else {
     const resor = await VL.api.recent(antal, null, true);
     VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.resor') }), resor.length ? kortLista(resor) : tomt(), visaFler(resor));

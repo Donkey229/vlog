@@ -35,6 +35,7 @@
       el('div', { class: 'hjalte__text' },
         el('small', { text: (VL.t('typ.' + data.kind) + (dagar > 1 ? ' · ' + VL.t('minne.dagar', { n: dagar }) : '')).toUpperCase() }),
         el('h1', { text: data.title || D.formatRange(data.start_date, data.end_date) }),
+        data.place ? el('a', { class: 'hjalte__plats', href: 'index.html?vy=tidslinje&plats=' + encodeURIComponent(data.place), text: '📍 ' + data.place }) : null,
         el('p', {}, [D.formatRange(data.start_date, data.end_date),
           forf ? VL.t('minne.skrivet_av', { namn: forf.display_name }) : null,
           data.story ? VL.t('minne.lastid', { n: VL.text.readingMinutes(data.story) }) : null,
