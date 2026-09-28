@@ -1,7 +1,7 @@
 @font-face { font-family: "Geist"; font-weight: 300 600; font-display: swap; src: url(../fonts/geist-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+2000-206F, U+20AC; }
 @font-face { font-family: "Geist"; font-weight: 300 600; font-display: swap; src: url(../fonts/geist-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA; }
 @font-face { font-family: "Noto Sans Thai"; font-weight: 300 600; font-display: swap; src: url(../fonts/noto-sans-thai.woff2) format("woff2"); unicode-range: U+0E01-0E5B; }
-:root { --bg:#fff; --pink:#ffe4ee; --pink2:#ffc9dc; --rose:#e84f86; --ink:#2b1a24; --muted:#7a5a69; --line:rgba(120,40,80,.14); --card:rgba(255,255,255,.9); --surface:#fff; --on-ink:#fff; --teal:#1f9a8c; --orange:#e0822a; --serif: Georgia, "Noto Sans Thai", serif; --sans: "Geist", "Noto Sans Thai", system-ui, sans-serif; }
+:root { --bg:#fff; --pink:#fbe4ea; --pink2:#f4c6d3; --rose:#7d1d3f; --rose-text:#7d1d3f; --brun:#7a4b2e; --brun-text:#7a4b2e; --rosa:#c73e70; --ink:#2b1a1d; --muted:#75574f; --line:rgba(125,29,63,.14); --card:rgba(255,255,255,.9); --surface:#fff; --on-ink:#fff; --serif: Georgia, "Noto Sans Thai", serif; --sans: "Geist", "Noto Sans Thai", system-ui, sans-serif; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; overflow-x: clip; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); min-height: 100vh; }
@@ -18,9 +18,9 @@ button { font: inherit; cursor: pointer; }
 /* logotyp: foto med ring + titel som ordbild */
 .top__varumarke { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1 1 0; }   /* basis 0: logotypen krymper (…) i stället för att raden bryts */
 .par { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: var(--ink); }
-.par__foto { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface, #fff); box-shadow: 0 0 0 2px var(--rose), 0 4px 12px rgba(232,79,134,.25); display: grid; place-items: center; color: var(--rose); background: var(--pink); }
+.par__foto { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface, #fff); box-shadow: 0 0 0 2px var(--rose), 0 4px 12px rgba(125,29,63,.25); display: grid; place-items: center; color: var(--rose-text); background: var(--pink); }
 .par__titel { font: 500 clamp(18px, 5.4vw, 23px)/1 var(--serif); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.par__och { font-style: italic; font-weight: 400; color: var(--rose); padding: 0 .06em; }
+.par__och { font-style: italic; font-weight: 400; color: var(--rose-text); padding: 0 .06em; }
 .par__emoji { font-size: .72em; vertical-align: .14em; margin-left: .12em; }
 .top__penna { font-size: 13px; opacity: .45; text-decoration: none; padding: 4px; }
 .top__penna:hover { opacity: 1; }
@@ -37,7 +37,7 @@ button { font: inherit; cursor: pointer; }
 .knapp--liten { padding: 7px 13px; font-size: 13px; border-radius: 99px; box-shadow: none; }
 .top__hoger .top__nytt { display: none; }   /* mobil: svävande ＋ i stället */
 /* ＋ Nytt minne: svävande knapp på mobil */
-.fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 15; width: 58px; height: 58px; border-radius: 50%; background: var(--rose); color: #fff; font-size: 32px; font-weight: 300; line-height: 1; display: grid; place-items: center; text-decoration: none; box-shadow: 0 10px 26px rgba(232,79,134,.45); }
+.fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 15; width: 58px; height: 58px; border-radius: 50%; background: var(--rose); color: #fff; font-size: 32px; font-weight: 300; line-height: 1; display: grid; place-items: center; text-decoration: none; box-shadow: 0 10px 26px rgba(125,29,63,.45); }
 .fab:active { transform: scale(.94); }
 body:has(#app-tips) .fab, body:has(#notisfraga) .fab { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
 body.har-fab .fot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }   /* ＋ täcker aldrig sidfoten */
@@ -45,7 +45,7 @@ body.har-fab .fot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)
 .sprak button { border: 0; background: none; font-size: 11px; padding: 4px 8px; border-radius: 99px; color: var(--muted); }
 .sprak button.pa { background: var(--ink); color: var(--on-ink); }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 0; background: var(--rose); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
-.knapp { display: inline-block; border: 0; background: var(--rose); color: #fff; font-weight: 600; padding: 9px 14px; border-radius: 12px; font-size: 14px; text-decoration: none; box-shadow: 0 6px 18px rgba(232,79,134,.28); }
+.knapp { display: inline-block; border: 0; background: var(--rose); color: #fff; font-weight: 600; padding: 9px 14px; border-radius: 12px; font-size: 14px; text-decoration: none; box-shadow: 0 6px 18px rgba(125,29,63,.28); }
 .knapp:disabled { opacity: .5; }
 .knapp--sekundar { background: var(--surface); color: var(--ink); box-shadow: none; border: 1px solid var(--line); }
 .knapp--fara { background: #c43d3d; }
@@ -74,10 +74,10 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 /* kalender */
 .kalhuvud { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .kalnav button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 12px; color: var(--muted); font-size: 13px; margin-left: 4px; }
-.kal { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 10px; box-shadow: 0 20px 60px rgba(232,79,134,.10); }
+.kal { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 10px; box-shadow: 0 20px 60px rgba(125,29,63,.10); }
 .kal__dagar, .kal__vecka { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .kal__vecka { --steg: 15px; position: relative; margin-top: 4px; padding-bottom: calc(var(--banor, 0) * var(--steg)); }
-@media (min-width: 900px) { .kal__vecka { --steg: 21px; } }
+@media (min-width: 900px) { .kal__vecka { --steg: 27px; } }   /* bandet (steg − 3 = 24 px) ryms i sin rad */
 .kal__dow { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .06em; padding: 0 4px; }
 .dag { position: relative; aspect-ratio: 1 / .9; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; text-decoration: none; color: inherit; }
 .dag--ute { opacity: .35; background: transparent; }
@@ -87,27 +87,35 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .dag img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .dag__antal, .dag__film { position: absolute; bottom: 5px; z-index: 2; font-size: 10px; font-weight: 600; background: var(--surface); padding: 0 6px; border-radius: 99px; }
 .dag__antal { right: 5px; } .dag__film { left: 5px; }
+/* smal skärm (dagrutan ca 40 px): ▶ och antalet ryms inte bredvid varandra – ▶ flyttar in i antalsmärket ("▶ 15"),
+   märkena blir mindre och ligger nere till höger, under datumet i stället för över det */
+@media (max-width: 599px) {
+  .dag__n { top: 3px; left: 5px; line-height: 1.2; }
+  .dag__antal, .dag__film { left: auto; right: 2px; bottom: 2px; font-size: 9px; line-height: 12px; padding: 0 3px; white-space: nowrap; }
+  .dag__antal ~ .dag__film { display: none; } .dag__antal:has(~ .dag__film)::before { content: "▶ "; }
+}
 .band { position: absolute; bottom: calc(var(--bana, 0) * var(--steg) + 1px); height: calc(var(--steg) - 3px); border-radius: 99px; z-index: 3; font-size: 9px; letter-spacing: .01em; font-weight: 700; color: #fff; display: block; line-height: calc(var(--steg) - 3px); padding: 0 7px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; box-shadow: 0 2px 6px rgba(0,0,0,.08); text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
-.band--resa { background: #e8568c; } .band--utflykt { background: #2a9d8f; } .band--dag { background: #9b7bd4; }
+.band--resa { background: var(--rose); } .band--utflykt { background: var(--brun); } .band--dag { background: var(--rosa); }
 @media (min-width: 900px) { .band { font-size: 11px; padding: 0 10px; } }
 .band--fore { border-top-left-radius: 0; border-bottom-left-radius: 0; } .band--efter { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-@media (min-width: 900px) { .kal { padding: 16px; } .kal__dagar, .kal__vecka { gap: 8px; } .kal__vecka { margin-top: 8px; } .dag { border-radius: 14px; } .dag__n { font-size: 13px; } .band { height: 24px; font-size: 12px; } }
+@media (min-width: 900px) { .kal { padding: 16px; } .kal__dagar, .kal__vecka { gap: 8px; } .kal__vecka { margin-top: 8px; } .dag { border-radius: 14px; } .dag__n { font-size: 13px; } .band { font-size: 12px; } }
 .kort { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 22px; }
 @media (min-width: 700px) { .kort { grid-template-columns: repeat(3, 1fr); } }
 .kort a { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; text-decoration: none; }
 .kort img, .kort .tomt { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--pink); }
 .kort div { padding: 12px 14px; }
-.kort small { color: var(--rose); font-weight: 600; font-size: 12px; letter-spacing: .04em; }
+.kort small { color: var(--rose-text); font-weight: 600; font-size: 12px; letter-spacing: .04em; }
 .kort h3 { font: 400 20px var(--serif); }
 
 /* händelse på hela sidan */
 .hjalte { position: relative; height: 62vh; min-height: 380px; overflow: hidden; background: var(--pink); }
 .hjalte img { width: 100%; height: 100%; object-fit: cover; }
 .hjalte::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.25), transparent 30%, transparent 50%, rgba(43,26,36,.78)); pointer-events: none; }
-.hjalte__tillbaka { position: absolute; top: 16px; left: 16px; z-index: 3; background: rgba(255,255,255,.92); padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.hjalte__tillbaka { position: absolute; top: 16px; left: 16px; z-index: 3; background: rgba(255,255,255,.92); color: #2b1a24; padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; text-decoration: none; }   /* vit pill: mörk text även i mörkt läge */
 .prickar { position: absolute; top: 16px; right: 16px; z-index: 4; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); font-size: 20px; letter-spacing: 1px; box-shadow: 0 4px 14px rgba(0,0,0,.14); }
 .meny { position: absolute; top: 62px; right: 16px; z-index: 5; background: var(--surface); border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.25); padding: 6px; width: 250px; }
 .meny { color: var(--ink); }
+.hjalte > .meny { max-height: calc(100% - 78px); overflow-y: auto; overscroll-behavior: contain; }   /* bildytan klipper (overflow: hidden) – menyn skrollar i stället för att sista raderna försvinner */
 .meny button { display: block; width: 100%; text-align: left; border: 0; background: none; color: inherit; padding: 10px 12px; border-radius: 9px; font-size: 14px; }
 .meny button:hover, .meny button:focus-visible { background: var(--pink); }
 .meny .fara { color: #c43d3d; }
@@ -140,24 +148,26 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .block[data-textx="mitten"] .block__text { text-align: center; } .block[data-textx="hoger"] .block__text { text-align: right; }
 .block[data-layout="text"] .block__bild { display: none; }
 .block__bild img, .block__bild video { width: 100%; max-height: 72vh; object-fit: cover; border-radius: 16px; }
-.block__titel { font-weight: 400; line-height: 1.15; margin-bottom: 8px; }
+.block__titel { font-weight: 400; line-height: 1.15; margin-bottom: 8px; color: var(--titelfarg); }   /* vald färg (style.js); utan den ärver rubriken temats textfärg */
+:root[data-theme="dark"] .block__titel { color: var(--titelfarg-mork); }   /* samma färg, ljusare om den är för mörk mot mörk bakgrund */
 .block__berattelse { font-size: 19px; line-height: 1.65; white-space: pre-wrap; }
 .av-rad { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
 .dagrubrik { font: 400 26px var(--serif); margin: 36px 0 12px; }
-.dagrubrik small { display: block; font-family: var(--sans); font-size: 12px; color: var(--rose); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.dagrubrik small { display: block; font-family: var(--sans); font-size: 12px; color: var(--rose-text); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .galleri { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 @media (min-width: 800px) { .galleri { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
 .galleri button { border: 0; padding: 0; background: var(--pink); border-radius: 14px; overflow: hidden; aspect-ratio: 1; position: relative; }
 .galleri img { width: 100%; height: 100%; object-fit: cover; }
-.galleri .spela { position: absolute; left: 8px; bottom: 8px; background: var(--surface); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
+.galleri .spela { position: absolute; left: 8px; bottom: 8px; background: var(--surface); color: var(--ink); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
 .inbaddning { margin-top: 20px; border-radius: 18px; overflow: hidden; background: #111; }
 .inbaddning iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; display: block; }
 .inbaddning--hog iframe { aspect-ratio: 9 / 16; max-height: 80vh; }
 .socialt { display: flex; gap: 14px; align-items: center; margin-top: 26px; font-size: 14px; color: var(--muted); }
-.gilla { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 6px 12px; color: var(--rose); font-weight: 600; }
+.gilla { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 6px 12px; color: var(--rose-text); font-weight: 600; }
 .gilla.pa { background: var(--rose); color: #fff; }
-.kommentar { margin-top: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-size: 14px; display: flex; gap: 8px; }
+.kommentar { margin-top: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
 .kommentar b { white-space: nowrap; } .kommentar button { margin-left: auto; }
+.kommentar > span { min-width: 0; overflow-wrap: anywhere; }   /* en lång länk bryts i stället för att knuffa ut Godkänn/Ta bort */
 .kommentarform { display: flex; gap: 8px; margin-top: 12px; }
 .kommentarform input, .kommentarform textarea { flex: 1; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; }
 .nasta { display: block; margin-top: 40px; position: relative; border-radius: 22px; overflow: hidden; height: 220px; text-decoration: none; background: var(--pink); }
@@ -174,8 +184,8 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .ljus button { position: absolute; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 26px; width: 48px; height: 48px; border-radius: 50%; }
 .ljus .stang { top: 14px; right: 14px; } .ljus .fore { left: 10px; top: 50%; } .ljus .efter { right: 10px; top: 50%; }
 
-/* dialoger */
-.dlg { background: var(--surface); color: var(--ink); border: 0; border-radius: 20px; padding: 20px; width: min(560px, 94vw); max-height: 90vh; overflow: auto; box-shadow: 0 30px 80px rgba(0,0,0,.3); }
+/* dialoger (margin: auto centrerar en modal dialog – "* { margin: 0 }" skriver annars över webbläsarens värde) */
+.dlg { margin: auto; background: var(--surface); color: var(--ink); border: 0; border-radius: 20px; padding: 20px; width: min(560px, 94vw); max-height: 90vh; overflow: auto; box-shadow: 0 30px 80px rgba(0,0,0,.3); }
 .dlg::backdrop { background: rgba(43,26,36,.45); }
 .dlg h2 { font: 400 24px var(--serif); margin-bottom: 14px; }
 .dlg__knappar { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
@@ -183,8 +193,10 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .falt label { font-size: 13px; color: var(--muted); }
 .falt input, .falt textarea, .falt select { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; width: 100%; }
 .falt textarea { min-height: 140px; resize: vertical; }
+/* iPhone zoomar in vid fält med text under 16 px (och zoomar inte ut igen) */
+input, textarea, select, .falt input, .falt textarea, .falt select, .kommentarform input, .kommentarform textarea { font-size: 16px; }
 .val { display: flex; flex-wrap: wrap; gap: 6px; }
-.val button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 10px; font-size: 13px; }
+.val button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 6px 10px; font-size: 13px; }
 .val button.pa { border-color: var(--rose); box-shadow: 0 0 0 1px var(--rose); }
 .farg { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); padding: 0; }
 .farg.pa { box-shadow: 0 0 0 2px var(--ink); }
@@ -219,7 +231,7 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .logg__text small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .klocka-plats { position: relative; display: inline-flex; }
 .klocka { position: relative; border: 0; background: transparent; font-size: 19px; padding: 4px 6px; cursor: pointer; line-height: 1; }
-.klocka__antal { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #e0245e; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.klocka__antal { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--rosa); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .meny--klocka { position: absolute; right: 0; top: calc(100% + 6px); width: min(340px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; z-index: 60; }
 @media (max-width: 700px) {
   .top__hoger { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }   /* klockan får inte knuffa ut "+ Nytt minne" */
@@ -232,28 +244,42 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .klocka__rad small { color: var(--muted); font-weight: 400; }
 .klocka__tom { margin: 8px 10px; color: var(--muted); }
 .nasta-traff { display: flex; flex-direction: column; gap: 3px; margin: 0 0 16px; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.06); color: inherit; text-decoration: none; }
-.nasta-traff small { color: var(--rose); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; }
+.nasta-traff small { color: var(--rose-text); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; }
 .nasta-traff strong { font-size: 18px; }
 .nasta-traff span { color: var(--muted); }
 .dag--ny { font: inherit; text-align: left; cursor: pointer; padding: 0; }
-.dag--ny::after { content: '+'; position: absolute; right: 6px; bottom: 3px; font-size: 13px; line-height: 1; color: var(--rose); opacity: .14; transition: opacity .15s; }
+.dag--ny::after { content: '+'; position: absolute; right: 6px; bottom: 3px; font-size: 13px; line-height: 1; color: var(--rose-text); opacity: .14; transition: opacity .15s; }
 .dag--ny:hover::after, .dag--ny:focus-visible::after, .dag--ny:active::after { opacity: 1; }
 .ihop__lista { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 46vh; overflow-y: auto; }
 .ihop__rad { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.ihop__rad img, .ihop__tom { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--pink); display: grid; place-items: center; color: var(--rose); }
+.ihop__rad img, .ihop__tom { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--pink); display: grid; place-items: center; color: var(--rose-text); }
 .ihop__text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .ihop__text small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ihop__bock { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; color: transparent; font-size: 13px; }
 .ihop__rad.vald { border-color: var(--rose); background: var(--pink); }
 .ihop__rad.vald .ihop__bock { background: var(--rose); border-color: var(--rose); color: #fff; }
-.ihop__blir { font-weight: 700; color: var(--rose); margin: 6px 0; }
-.dag__traff { position: absolute; right: 4px; top: 3px; z-index: 3; font-size: 13px; pointer-events: none; }
+.ihop__blir { font-weight: 700; color: var(--rose-text); margin: 6px 0; }
+/* träff: namnet i ett blått moln nere i dagrutan (två rader, sedan …); pucklarna ovanpå gör det till ett moln */
+.dag__traff { position: absolute; left: 2px; right: 2px; bottom: 3px; z-index: 3; pointer-events: none; background: #2a6db0; color: #fff; border-radius: 9px;
+  font: 700 8.5px/1.15 var(--sans); padding: 2px 3px; text-align: center; box-shadow: 0 2px 6px rgba(20,60,110,.3); }
+.dag__traff-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.dag__traff::before, .dag__traff::after { content: ''; position: absolute; z-index: -1; background: #2a6db0; border-radius: 50%; }
+.dag__traff::before { width: 12px; height: 12px; top: -5px; left: 22%; } .dag__traff::after { width: 9px; height: 9px; top: -3px; right: 24%; }
+.dag:has(.dag__traff) .dag__antal, .dag:has(.dag__traff) .dag__film { display: none; }   /* molnet tar platsen nere i rutan */
+@media (min-width: 600px) { .dag__traff { font-size: 10px; padding: 3px 5px; border-radius: 11px; } }
+/* smal dagruta (mobil): en rad, små pucklar – datumet ska synas ovanför molnet */
+.dag { container-type: inline-size; }
+@container (max-width: 80px) {
+  .dag__traff { font-size: 8.5px; padding: 1px 3px; border-radius: 7px; bottom: 2px; }
+  .dag__traff-text { -webkit-line-clamp: 1; }
+  .dag__traff::before { width: 7px; height: 7px; top: -3px; } .dag__traff::after { width: 5px; height: 5px; top: -2px; }
+}
 .traffar { display: grid; gap: 12px; }
 .traff { padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
 .traff--vald { outline: 3px solid var(--rose); }
 .traff--forr { opacity: .75; }
 .traff__topp { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.traff__nar { font-size: 13px; font-weight: 700; color: var(--rose); }
+.traff__nar { font-size: 13px; font-weight: 700; color: var(--rose-text); }
 .traff__knappar { display: flex; gap: 12px; }
 .traff__titel { margin: 6px 0 4px; font-size: 20px; }
 .traff__nar-text { margin: 0 0 6px; }
@@ -267,26 +293,26 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .vag-behallare { margin: 14px -4px 0; }
 .vag { position: relative; }
 .vag__svg { position: absolute; inset: 0; overflow: visible; }
-.vag__kant { fill: none; stroke: #e9c94f; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
-.vag__yta { fill: none; stroke: #fbe78c; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
-.vag__mitt { fill: none; stroke: #fffdf2; stroke-width: 2.5; stroke-dasharray: 9 9; stroke-linecap: round; }
-.vag__framtid { fill: none; stroke: #fbe78c; stroke-width: 22; stroke-linecap: butt; stroke-dasharray: 16 12; opacity: .9; }
+.vag__kant { fill: none; stroke: #a0724f; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
+.vag__yta { fill: none; stroke: #dcb89c; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
+.vag__mitt { fill: none; stroke: #fff8f1; stroke-width: 2.5; stroke-dasharray: 9 9; stroke-linecap: round; }
+.vag__framtid { fill: none; stroke: #dcb89c; stroke-width: 22; stroke-linecap: butt; stroke-dasharray: 16 12; opacity: .9; }
 .vag__station { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; width: 104px; color: inherit; text-decoration: none; text-align: center; z-index: 2; }
-.vag__bild { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.18); background: var(--pink); display: grid; place-items: center; font-size: 22px; color: var(--rose); }
+.vag__bild { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.18); background: var(--pink); display: grid; place-items: center; font-size: 22px; color: var(--rose-text); }
 .vag__station--traff .vag__bild { background: #fff; border-style: dashed; border-color: var(--rose); }
 .vag__resa { position: absolute; top: -4px; right: 18px; background: var(--rose); color: #fff; border-radius: 99px; font-size: 12px; padding: 1px 6px; }
 .vag__text { display: flex; flex-direction: column; margin-top: 4px; line-height: 1.2; }
-.vag__text small { font-weight: 700; color: #b3134d; font-size: 12px; }
-:root[data-theme="dark"] .vag__text small { color: var(--rose); }
-.vag__station--hoger .vag__text { position: relative; left: -38px; text-align: right; align-items: flex-end; }
-.vag__station--vanster .vag__text { position: relative; left: 38px; text-align: left; align-items: flex-start; }
-.vag__text span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.vag__skylt { position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #5c4608; background: #fbe78c; padding: 0 4px; border-radius: 4px; white-space: nowrap; z-index: 1; pointer-events: none; }
-.vag__start { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #8a6d12; }
-.vag__nu { position: absolute; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: var(--rose); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(232,79,134,.35); z-index: 2; font-size: 13px; line-height: 1.1; }
+.vag__text small { font-weight: 700; color: var(--rose-text); font-size: 12px; }
+/* ändstationernas text har fast ytterkant (stationens kant ± 38 px = 14 px förbi mitten, före svängen); vag.js smalnar av den mot grannen */
+.vag__station--hoger .vag__text { position: relative; left: -38px; align-self: flex-end; text-align: right; align-items: flex-end; }
+.vag__station--vanster .vag__text { position: relative; left: 38px; align-self: flex-start; text-align: left; align-items: flex-start; }
+.vag__text span { font-size: 12px; overflow-wrap: anywhere; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vag__skylt { position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #4a2a18; background: #f1dccb; padding: 0 4px; border-radius: 4px; white-space: nowrap; z-index: 1; pointer-events: none; }
+.vag__start { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #6b3f24; }
+.vag__nu { position: absolute; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: var(--rose); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(125,29,63,.35); z-index: 2; font-size: 13px; line-height: 1.1; }
 @media (min-width: 760px) { .vag__bild { width: 76px; height: 76px; } .vag__station { transform: translate(-50%, -38px); width: 130px; } .vag__text span, .vag__text small { font-size: 13px; }
   .vag__station--hoger .vag__text { left: -52px; } .vag__station--vanster .vag__text { left: 52px; } }
-:root[data-theme="dark"] .vag__start { color: #f3d36b; }   /* skylten ligger på den gula vägen och behåller sin mörka färg */
+:root[data-theme="dark"] .vag__start { color: var(--brun-text); }   /* START står bredvid vägen på mörk botten; skyltarna på vägen behåller sin mörka text */
 .galleri-flikar { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
 .galleri-flikar .flik { border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
 .galleri-flikar .flik.pa { background: var(--rose); color: #fff; border-color: var(--rose); }
@@ -294,25 +320,27 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .framsteg i { display: block; height: 100%; background: var(--rose); width: 0; transition: width .2s; }
 
 /* inloggning och admin */
-.ruta { max-width: 420px; margin: 8vh auto; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; box-shadow: 0 20px 60px rgba(232,79,134,.12); }
+.ruta { max-width: 420px; margin: 8vh auto; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; box-shadow: 0 20px 60px rgba(125,29,63,.12); }
 .ruta h1 { font: 400 30px var(--serif); margin-bottom: 16px; }
 /* QR-koden behöver en ljus tyst zon runt sig – utan den hittar kameran inte hörnrutorna mot mörk bakgrund */
 .ruta .qr { display: block; width: 260px; height: 260px; margin: 10px auto; padding: 18px; background: #fff; border-radius: 12px; box-sizing: border-box; }
 .tabell { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 16px; overflow: hidden; }
 .tabell td, .tabell th { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: 14px; }
+.tabell td:first-child { overflow-wrap: anywhere; }   /* lång e-postadress bryts, så att knapparna längst till höger ryms på 360 px */
 .sektion { margin-top: 28px; } .sektion h2 { font: 400 24px var(--serif); margin-bottom: 10px; }
 .matare { height: 10px; background: var(--pink); border-radius: 99px; overflow: hidden; } .matare i { display: block; height: 100%; background: var(--rose); }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 60; background: var(--ink); color: var(--on-ink); padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: 92vw; }
-.toast--fel { background: #b33535; }
+.toast--fel { background: #b33535; color: #fff; }   /* vit text: --on-ink blir mörk i mörkt läge */
 .tomlage { text-align: center; padding: 60px 16px; color: var(--muted); }
 [hidden] { display: none !important; }
 
 /* mörkt läge */
-:root[data-theme="dark"] { --bg:#16101a; --pink:#2b1d27; --pink2:#4a2c3c; --rose:#ff6f9f; --ink:#f3e8ee; --muted:#bca6b3; --line:rgba(255,200,230,.16); --card:rgba(34,24,31,.92); --surface:#21171f; --on-ink:#16101a; --teal:#46c9b8; --orange:#f0a050; }
+:root[data-theme="dark"] { --bg:#16101a; --pink:#2e1a22; --pink2:#4f2636; --rose:#a3345a; --rose-text:#f093ad; --brun:#8b5a3a; --brun-text:#d4a882; --rosa:#c73e70; --ink:#f3e8ee; --muted:#c4aca6; --line:rgba(240,147,173,.16); --card:rgba(34,24,31,.92); --surface:#21171f; --on-ink:#16101a; }
 :root[data-theme="dark"] .tona { background: linear-gradient(180deg, rgba(22,16,26,.84), rgba(43,29,39,.9) 55%, rgba(22,16,26,.96)); }
 :root[data-theme="dark"] .top { background: rgba(22,16,26,.86); }
 :root[data-theme="dark"] .mosaik { opacity: .14; }
 :root[data-theme="dark"] .knapp--sekundar { color: var(--ink); }
+:root[data-theme="dark"] .meny .fara { color: #ff8a80; }   /* ljusare röd: #c43d3d syns dåligt på den mörka menyn */
 
 /* meny: sök och tema */
 .sok { display: none; order: 3; width: 100%; align-items: center; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); overflow: hidden; }
@@ -330,7 +358,7 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 
 /* kategorier, författare, lästid */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
-.chips a, .chips button { font-size: 12px; font-weight: 600; text-decoration: none; padding: 5px 11px; border-radius: 99px; background: var(--pink); color: var(--rose); border: 1px solid transparent; }
+.chips a, .chips button { font-size: 12px; font-weight: 600; text-decoration: none; padding: 5px 11px; border-radius: 99px; background: var(--pink); color: var(--rose-text); border: 1px solid transparent; }
 .chips .pa { background: var(--rose); color: #fff; }
 .forfattare { display: inline-flex; align-items: center; gap: 6px; }
 .forfattare img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
@@ -345,7 +373,7 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 
 /* kommentarer: väntande och honungsfälla */
 .kommentar--vantar { border-style: dashed; opacity: .85; }
-.kommentar .etikett { font-size: 11px; color: var(--orange); margin-left: 6px; }
+.kommentar .etikett { font-size: 11px; color: var(--brun-text); margin-left: 6px; }
 .honung { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
 .kommentarform { flex-wrap: wrap; }
 .kommentarform .namn { flex: 1 1 100%; }
@@ -376,7 +404,7 @@ button.av { border: 0; cursor: pointer; }
 
 /* Närvaro uppe till höger: partnerns profil med grön prick när hon/han är inne i appen */
 .narvaro { display: flex; gap: 6px; position: relative; }
-.av--narvaro { position: relative; background: var(--pink); color: var(--rose); border: 2px solid var(--surface, #fff); box-shadow: 0 0 0 2px var(--line); }
+.av--narvaro { position: relative; background: var(--pink); color: var(--rose-text); border: 2px solid var(--surface, #fff); box-shadow: 0 0 0 2px var(--line); }
 .av--narvaro .prick { position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: #b9aab2; border: 2px solid var(--surface, #fff); }
 .av--narvaro.ar-inne { box-shadow: 0 0 0 2px #2fb36b; }
 .av--narvaro.ar-inne .prick { background: #2fb36b; }
@@ -391,3 +419,71 @@ button.av { border: 0; cursor: pointer; }
 .platslista a { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
 .platslista a:hover { border-color: var(--rose); }
 .platslista small { color: var(--muted); }
+
+/* Hjärtat (Jock 2026-09-28): stora vita hjärtat överst på startsidan med den andras senaste reaktion inuti,
+   eget foto genomskinligt på mörk mjuk botten, puls tills man läst. Hjärtat i sidhuvudet ersätter klockan 🔔. */
+.hjarta-hero { position: relative; isolation: isolate; overflow: hidden; margin: 14px 0 22px; border-radius: 26px; min-height: 330px; display: grid; place-items: center; padding: 22px 12px;
+  background: radial-gradient(ellipse at 50% 35%, #5a1a33 0%, #2c0f1b 62%, #1b0a11 100%); box-shadow: 0 18px 50px rgba(43,10,24,.35); }
+.hjarta-hero__bild { position: absolute; inset: 0; z-index: -2; background: center / cover no-repeat; opacity: .55; }
+.hjarta-hero--bild::after { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 45%, rgba(27,10,17,.15), rgba(27,10,17,.62) 75%); }
+.hjarta-hero__byt { position: absolute; right: 10px; bottom: 10px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 17px; cursor: pointer; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.hjarta-stort { position: relative; width: min(290px, 80vw); aspect-ratio: 100 / 90; border: 0; padding: 0; background: none; cursor: pointer; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.hjarta-stort__form { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 26px rgba(0,0,0,.35)); }
+.hjarta-stort__form path { fill: #fff; }
+.hjarta-stort__inne { position: absolute; inset: 14% 18% 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; color: #2b1a1d; }
+.hjarta-stort__emoji { font-size: clamp(38px, 12vw, 52px); line-height: 1.1; }
+.hjarta-stort__text { font: 600 16px/1.25 var(--sans); color: #5c1530; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.hjarta-stort__text--tom { font-weight: 500; font-size: 14px; }
+.hjarta-stort__tid { font-size: 12px; color: #6b4a44; }
+.hjarta-stort__ny { position: absolute; top: 9%; right: 13%; background: var(--rosa); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 2px 8px; letter-spacing: .03em; }
+.hjarta-stort--olast { animation: hjartslag 1.6s ease-in-out infinite; }
+.hjarta-stort--olast .hjarta-stort__form { filter: drop-shadow(0 0 22px rgba(255,190,210,.75)) drop-shadow(0 10px 26px rgba(0,0,0,.35)); }
+@keyframes hjartslag { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.05); } }
+.hjarta-stort:focus-visible { outline: 3px solid #fff; outline-offset: 6px; border-radius: 30px; }
+@media (min-width: 760px) { .hjarta-hero { min-height: 380px; } .hjarta-stort { width: 330px; } }
+@media (prefers-reduced-motion: reduce) { .hjarta-stort--olast { animation: none; } }
+
+.klocka__hjarta { display: block; width: 23px; height: 21px; overflow: visible; }
+.klocka__hjarta path { fill: var(--rose-text); }
+
+.hjarta-ark { padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 699px) { .hjarta-ark { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 22px 22px 0 0; max-height: 92vh; } }
+.hjarta-ark__topp { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.hjarta-ark__topp h2 { display: flex; align-items: center; gap: 10px; margin: 0; }
+.hjarta-ark__ikon { width: 26px; height: 24px; } .hjarta-ark__ikon path { fill: var(--rose-text); }
+.hjarta-ark__stang { border: 0; background: var(--pink); color: var(--ink); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+.hjarta-ark__rubrik { font-weight: 700; margin: 14px 0 8px; font-size: 14px; }
+.hjarta-historik { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow-y: auto; padding: 8px; border-radius: 16px; background: var(--pink); overscroll-behavior: contain; }
+.hjarta-historik__tom { margin: 6px; }
+.bubbla { max-width: 82%; padding: 7px 12px 6px; border-radius: 16px; display: flex; flex-direction: column; gap: 2px; }
+.bubbla__text { font-size: 15px; overflow-wrap: anywhere; }
+.bubbla small { font-size: 11px; opacity: .8; }
+.bubbla--min { align-self: flex-end; background: var(--rose); color: #fff; border-bottom-right-radius: 5px; }
+.bubbla--hennes { align-self: flex-start; background: var(--surface); color: var(--ink); border-bottom-left-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.hjarta-snabbval { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.snabbval { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 12px/1.2 var(--sans); cursor: pointer; }
+.snabbval__emoji { font-size: 24px; line-height: 1.1; }
+.snabbval:active { transform: scale(.96); } .snabbval:disabled { opacity: .5; }
+.hjarta-egen { margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
+.hjarta-egen summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.hjarta-palett { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.hjarta-palett button { width: 38px; height: 38px; border: 1px solid transparent; border-radius: 10px; background: var(--pink); font-size: 20px; cursor: pointer; }
+.hjarta-palett button[aria-pressed="true"] { border-color: var(--rose); box-shadow: 0 0 0 1px var(--rose); }
+.hjarta-egen__rad { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.hjarta-egen__emoji { width: 64px; text-align: center; font-size: 20px; }
+.hjarta-egen__text { flex: 1; min-width: 0; }
+.hjarta-egen__emoji, .hjarta-egen__text { padding: 9px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font-size: 16px; }
+.hjarta-egen__raknare { flex: 1; color: var(--muted); } .hjarta-egen__raknare.over { color: #c43d3d; font-weight: 700; }
+.hjarta-egen__fel { color: #c43d3d; font-size: 13px; min-height: 1em; margin-top: 6px; }
+:root[data-theme="dark"] .hjarta-egen__fel, :root[data-theme="dark"] .hjarta-egen__raknare.over { color: #ff8a80; }
+.hjarta-handelser .klocka__lista { max-height: none; }
+.bakgrund-val { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 60vh; overflow-y: auto; }
+.bakgrund-val button { aspect-ratio: 1; border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: var(--pink); cursor: pointer; }
+.bakgrund-val img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Profilbilder i rundlarna (J uppe till höger, partnern med grön prick) */
+.av { position: relative; }
+.av__bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.av--bild .av__bokstav { visibility: hidden; }
+.profilbild-val__telefon { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; cursor: pointer; }
+.profilbild-val__fil { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
