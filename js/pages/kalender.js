@@ -36,6 +36,7 @@
     const modell = VL.calendar.buildMonth(year, month0, minnen);
     const manad = new Intl.DateTimeFormat(VL.locale(), { month: 'long', year: 'numeric' }).format(D.parseDay(forsta));
     const ga = delta => { const d = new Date(year, month0 + delta, 1); location.search = '?vy=kalender&man=' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+    const kanSkapa = VL.text.kanRedigera(prof) && !!VL.redigera;   // tryck på en tom dag = nytt minne den dagen
     const iManaden = minnen.filter(x => (x.end_date || x.start_date) >= forsta && x.start_date <= sista).length;
     const allaTraffar = VL.text.kanRedigera(prof) && VL.traffar ? await VL.api.traffar().catch(() => []) : [];
     const traffPaDag = {}; allaTraffar.forEach(t => { traffPaDag[t.day] = traffPaDag[t.day] || t; });
@@ -45,22 +46,32 @@
       el('strong', { text: '📍 ' + nasta.title }),
       el('span', { text: VL.traffar.datumText(nasta) + (VL.traffar.plats(nasta) ? ' · ' + VL.traffar.plats(nasta) : '') })));
     main.append(el('div', { class: 'kalhuvud' },
-      el('div', {}, el('h1', { class: 'stor', text: manad.charAt(0).toUpperCase() + manad.slice(1) }), el('p', { class: 'dampad', text: VL.t('kal.antal', { n: iManaden }) + ' · ' + VL.t('kal.tips') })),
+      el('div', {}, el('h1', { class: 'stor', text: manad.charAt(0).toUpperCase() + manad.slice(1) }), el('p', { class: 'dampad', text: VL.t('kal.antal', { n: iManaden }) + ' · ' + VL.t(kanSkapa ? 'kal.tips_ny' : 'kal.tips') })),
       el('div', { class: 'kalnav' }, el('button', { text: '‹', 'aria-label': '‹', onclick: () => ga(-1) }), el('button', { text: VL.t('kal.idag'), onclick: () => { location.search = '?vy=kalender'; } }), el('button', { text: '›', 'aria-label': '›', onclick: () => ga(1) }))));
     const dow = Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(VL.locale(), { weekday: 'short' }).format(new Date(2026, 5, 29 + i)));
     const kal = el('div', { class: 'kal' }, el('div', { class: 'kal__dagar' }, dow.map(d => el('div', { class: 'kal__dow', text: d.toUpperCase() }))));
+    const banor = VL.calendar.banor(modell.bands);
     modell.weeks.forEach((vecka, w) => {
       const rad = el('div', { class: 'kal__vecka' }, vecka.map(c => {
         const cls = 'dag' + (c.inMonth ? '' : ' dag--ute') + (c.isToday ? ' dag--idag' : '') + (c.thumb ? ' dag--har' : '');
         const inner = [el('span', { class: 'dag__n', text: c.day }), c.thumb ? el('img', { src: c.thumb, alt: '', loading: 'lazy' }) : null,
           c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? el('span', { class: 'dag__traff', text: '📍', title: traffPaDag[c.key].title }) : null];
-        return c.memoryIds.length ? el('a', { class: cls, href: oppna(c.memoryIds[0]), 'aria-label': c.key }, inner)
-          : traffPaDag[c.key] ? el('a', { class: cls, href: 'traffar.html?id=' + traffPaDag[c.key].id, 'aria-label': c.key }, inner) : el('div', { class: cls }, inner);
+        const mal = VL.calendar.dagMal(c, kanSkapa, !!traffPaDag[c.key]);
+        return mal === 'minne' ? el('a', { class: cls, href: oppna(c.memoryIds[0]), 'aria-label': c.key }, inner)
+          : mal === 'traff' ? el('a', { class: cls, href: 'traffar.html?id=' + traffPaDag[c.key].id, 'aria-label': '📍 ' + traffPaDag[c.key].title }, inner)
+          : mal === 'ny' ? el('button', { type: 'button', class: cls + ' dag--ny', 'aria-label': VL.t('kal.ny_dag', { dag: new Intl.DateTimeFormat(VL.locale(), { dateStyle: 'long' }).format(D.parseDay(c.key)) }), onclick: () => VL.redigera.nyttMinne(c.key) }, inner)
+          : el('div', { class: cls }, inner);
       }));
-      modell.bands.filter(b => b.week === w).forEach(b => rad.append(el('a', {
-        class: 'band band--' + b.kind + (b.continuesBefore ? ' band--fore' : '') + (b.continuesAfter ? ' band--efter' : ''), href: oppna(b.memoryId),
-        style: { left: `calc(${b.col} * (100% / 7) + 3px)`, width: `calc(${b.span} * (100% / 7) - 6px)`, top: `calc(4px + ${b.lane} * 24px)` },
-        text: (b.kind === 'resa' ? '✈ ' : b.kind === 'utflykt' ? '⛵ ' : '') + (b.title || VL.t('typ.' + b.kind)) })));
+      if (banor[w]) rad.style.setProperty('--banor', banor[w]);   // remsan under dagarna får plats för banden
+      modell.bands.filter(b => b.week === w).forEach(b => {
+        const band = el('a', {
+          class: 'band band--' + b.kind + (b.continuesBefore ? ' band--fore' : '') + (b.continuesAfter ? ' band--efter' : ''), href: oppna(b.memoryId),
+          title: b.title || VL.t('typ.' + b.kind),
+          style: { left: `calc(${b.col} * (100% / 7) + 2px)`, width: `calc(${b.span} * (100% / 7) - 4px)` },
+          text: (b.kind === 'resa' ? '✈ ' : b.kind === 'utflykt' ? '⛵ ' : '') + (b.title || VL.t('typ.' + b.kind)) });
+        band.style.setProperty('--bana', b.lane);
+        rad.append(band);
+      });
       kal.append(rad);
     });
     main.append(kal);
@@ -104,5 +115,5 @@
     const resor = await VL.api.recent(antal, null, true);
     VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.resor') }), resor.length ? kortLista(resor) : tomt(), visaFler(resor));
   }
-  if (q.get('nytt') === '1' && VL.redigera && prof && ['admin', 'editor'].includes(prof.role)) VL.redigera.nyttMinne();
+  if (q.get('nytt') === '1' && VL.redigera && prof && ['admin', 'editor'].includes(prof.role)) VL.redigera.nyttMinne(q.get('dag'));
 })(window.VL);

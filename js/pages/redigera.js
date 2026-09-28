@@ -116,7 +116,9 @@
   function datumDialog() {
     const { data: m, huvuden, prof } = VL.minneSida;
     const typ = el('select', {}, ['dag', 'resa', 'utflykt'].map(k => el('option', { value: k, selected: m.kind === k, text: VL.t('typ.' + k) })));
-    const start = el('input', { type: 'date', value: m.start_date, required: true }), slut = el('input', { type: 'date', value: m.end_date || '' });
+    // slutdatum förifyllt med start (en dag) och min = start: då öppnar väljaren på rätt månad i stället för i dag
+    const start = el('input', { type: 'date', value: m.start_date, required: true }), slut = el('input', { type: 'date', value: m.end_date || m.start_date, min: m.start_date });
+    kopplaSlut(start, slut);
     // Minnen helt inom det nya intervallet som jag får ändra kan slås ihop hit (t.ex. importerade dagar → en resa).
     const valda = new Set();
     const ihop = el('div', { class: 'val', style: { flexDirection: 'column' } });
@@ -129,7 +131,7 @@
       ihopFalt.hidden = !kand.length;
     };
     const ihopFalt = el('div', { class: 'falt' }, el('label', { text: VL.t('red.slaihop') }), el('small', { class: 'dampad', text: VL.t('red.slaihop_text') }), ihop);
-    start.onchange = slut.onchange = ritaIhop; ritaIhop();
+    start.addEventListener('change', ritaIhop); slut.addEventListener('change', ritaIhop); ritaIhop();
     VL.openDialog(VL.t('meny.datum'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), ihopFalt), { okText: VL.t('red.spara'), onOk: async () => {
       if (slut.value && slut.value < start.value) { VL.toast(VL.t('red.slut'), 'fel'); return false; }
       const ny = { start: start.value, slut: slut.value && slut.value !== start.value ? slut.value : null };
@@ -139,6 +141,44 @@
       if (valda.size) await VL.api.mergeInto(m, [...valda].map(id => ({ id })));
       VL.notis && await VL.notis.skicka('datum', m);
       await ladda(); } });
+  }
+
+  // Lägg ihop flera dagar till en händelse (t.ex. 27–28 juni): välj dagarna runt omkring, spannet räknas ut, bilderna flyttas hit.
+  async function ihopDialog() {
+    const { data: m, huvuden, prof } = VL.minneSida;
+    const kand = await VL.api.withThumbs(D.ihopKandidater(huvuden, m, prof)).catch(() => D.ihopKandidater(huvuden, m, prof));
+    const valda = new Set();
+    const blir = el('p', { class: 'ihop__blir' });
+    const typ = el('select', {}, ['dag', 'resa', 'utflykt'].map(k => el('option', { value: k, text: VL.t('typ.' + k) })));
+    const uppd = () => {
+      const s = D.nyttSpann(m, kand.filter(h => valda.has(h.id)));
+      blir.textContent = valda.size ? VL.t('ihop.blir', { datum: D.formatRange(s.start, s.slut), n: valda.size + 1 }) : VL.t('ihop.valj');
+      if (!typ.dataset.rord) typ.value = s.slut && m.kind === 'dag' ? 'utflykt' : m.kind;   // flera dagar blir en utflykt, om man inte själv valt
+    };
+    typ.onchange = () => { typ.dataset.rord = '1'; };
+    const lista = el('div', { class: 'ihop__lista' }, kand.length ? kand.map(h => {
+      const rad = el('button', { type: 'button', class: 'ihop__rad', 'aria-pressed': 'false', onclick: () => {
+        if (valda.has(h.id)) valda.delete(h.id); else valda.add(h.id);
+        rad.classList.toggle('vald', valda.has(h.id)); rad.setAttribute('aria-pressed', String(valda.has(h.id))); uppd();
+      } },
+        h.thumb ? el('img', { src: h.thumb, alt: '' }) : el('span', { class: 'ihop__tom', text: '♥' }),
+        el('span', { class: 'ihop__text' }, el('b', { text: D.formatRange(h.start_date, h.end_date) }), el('small', { text: h.title || VL.t('typ.' + (h.kind || 'dag')) })),
+        el('span', { class: 'ihop__bock', text: '✓', 'aria-hidden': 'true' }));
+      return rad;
+    }) : el('p', { class: 'dampad', text: VL.t('ihop.inga') }));
+    uppd();
+    VL.openDialog(VL.t('ihop.rubrik'), el('div', {}, el('p', { class: 'dampad', text: VL.t('ihop.tips') }), lista, blir, falt('red.typ', typ),
+      el('small', { class: 'dampad', text: VL.t('red.slaihop_text') })), { okText: VL.t('red.spara'), onOk: async () => {
+      const kallor = kand.filter(h => valda.has(h.id));
+      if (!kallor.length) { VL.toast(VL.t('ihop.valj'), 'fel'); return false; }
+      const s = D.nyttSpann(m, kallor);
+      await VL.api.updateMemory(m.id, { kind: typ.value, start_date: s.start, end_date: s.slut });
+      // bildernas dagar i det här minnet flyttas bara om startdagen ändras (samma regel som i datumrutan)
+      for (const x of m.media || []) { const nd = D.remapDay(x.day, m.start_date, s.start, s.slut); if (nd !== x.day) await VL.api.setMediaDay(x.id, nd); }
+      await VL.api.mergeInto(m, kallor);
+      VL.notis && await VL.notis.skicka('datum', m);
+      await ladda();
+    } });
   }
 
   function lankDialog() {
@@ -162,7 +202,7 @@
     const m = VL.minneSida.data;
     const rad = (key, fn, fara) => el('button', { type: 'button', role: 'menuitem', class: fara ? 'fara' : '', text: VL.t(key), onclick: () => { meny.remove(); fn(); } });
     const meny = el('div', { class: 'meny', role: 'menu' },
-      rad('meny.redigera', stilDialog), rad('meny.bilder', bildDialog), rad('meny.kategorier', kategoriDialog), rad('meny.datum', datumDialog), rad('meny.lank', lankDialog), rad('meny.synlighet', synlighetDialog),
+      rad('meny.redigera', stilDialog), rad('meny.bilder', bildDialog), rad('meny.kategorier', kategoriDialog), rad('meny.ihop', ihopDialog), rad('meny.datum', datumDialog), rad('meny.lank', lankDialog), rad('meny.synlighet', synlighetDialog),
       rad('meny.kopiera', async () => { try { const k = await VL.api.duplicateMemory(m); location.href = 'minne.html?id=' + k.id; } catch (e) { VL.toast(e.message, 'fel'); } }),
       el('hr'),
       rad('meny.ta_bort_text', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_text'))) { await VL.api.updateMemory(m.id, { story: '' }); await ladda(); } }, true),
@@ -174,21 +214,34 @@
     meny.addEventListener('keydown', e => { if (e.key === 'Escape') { meny.remove(); knapp.focus(); } });
   }
 
-  async function nyttMinne() {
+  // Slutdatum följer start: min = start, och ligger slut före start flyttas det med.
+  function kopplaSlut(start, slut) {
+    start.addEventListener('change', () => { slut.min = start.value; if (!slut.value || slut.value < start.value) slut.value = start.value; });
+  }
+  let oppnarNytt = false;   // två snabba tryck på en dag ska inte ge två rutor
+  async function nyttMinne(dag) {
+    if (oppnarNytt || document.querySelector('dialog.dlg[open][data-nytt]')) return;
+    oppnarNytt = true;
+    try { await nyttMinneRuta(dag); } finally { oppnarNytt = false; }
+  }
+  async function nyttMinneRuta(dag) {
+    const vald = /^\d{4}-\d{2}-\d{2}$/.test(dag || '') ? dag : null;   // dagen man tryckt på i kalendern
     const katVal = kategoriVal(await VL.api.categories(), []);
     const typ = el('select', {}, ['dag', 'resa', 'utflykt'].map(k => el('option', { value: k, text: VL.t('typ.' + k) })));
-    const start = el('input', { type: 'date', value: D.todayKey(), required: true }), slut = el('input', { type: 'date' });
+    const dag0 = vald || D.todayKey();
+    const start = el('input', { type: 'date', value: dag0, required: true }), slut = el('input', { type: 'date', value: dag0, min: dag0 });
+    kopplaSlut(start, slut);
     const titel = el('input', { maxlength: 120 }), story = el('textarea', { maxlength: 20000 }), platsFalt = el('input', { maxlength: 80, placeholder: VL.t('red.plats') });
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
     filer.onchange = async () => { // föreslå datum från första filen: EXIF > filnamn > filtid
-      const f = filer.files[0]; if (!f) return;
+      const f = filer.files[0]; if (!f || vald) return;   // man har själv valt dagen – bilderna ändrar den inte
       const exif = VL.media.isPhoto(f) ? await VL.media.readExifDate(f) : null;
       const cd = VL.dates.captureDate({ exifDate: exif, filename: f.name, lastModified: f.lastModified, isVideo: VL.media.isVideo(f) });
-      if (cd.date) start.value = D.dayKey(cd.date);
+      if (cd.date) { start.value = D.dayKey(cd.date); start.dispatchEvent(new Event('change')); }   // slutdatumet följer med
     };
     let mem = null, klara = 0;   // om något går fel och man trycker Spara igen: fortsätt, skapa inte ett nytt minne
-    VL.openDialog(VL.t('nav.nytt'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), falt('red.titel', titel), falt('red.plats', platsFalt), falt('red.berattelse', story), falt('meny.kategorier', katVal.node), falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
+    const ruta = VL.openDialog(VL.t('nav.nytt'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), falt('red.titel', titel), falt('red.plats', platsFalt), falt('red.berattelse', story), falt('meny.kategorier', katVal.node), falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
       if (slut.value && slut.value < start.value) { VL.toast(VL.t('red.slut'), 'fel'); return false; }
       if (!mem) {
         mem = await VL.api.createMemory({ kind: typ.value, start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null, title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, visibility: 'private' });
@@ -199,7 +252,8 @@
       if (kvar.length) await laddaUpp(mem, kvar, fs.set, n => { klara = fore + n; });
       if (VL.notis) await VL.notis.skicka('nytt', mem);   // väntar: sidbytet skulle annars avbryta anropet
       location.href = 'minne.html?id=' + mem.id; } });
+    ruta.dialog.dataset.nytt = '1';   // spärren mot en andra ruta
   }
 
-  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp, bildDialog };
+  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp, bildDialog, ihopDialog, datumDialog };
 })(window.VL);

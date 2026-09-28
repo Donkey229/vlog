@@ -58,7 +58,8 @@
     try { lista = await VL.api.traffar(); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); }
     const idag = VL.dates.todayKey();
     const { kommande, tidigare } = T.dela(lista, idag);
-    main.replaceChildren(
+    main.replaceChildren();   // VL.add hoppar över null (replaceChildren skrev ut "null" när det inte fanns tidigare träffar)
+    VL.add(main,
       el('div', { class: 'kalhuvud' }, el('h1', { class: 'stor', text: VL.t('traff.rubrik') }),
         el('button', { type: 'button', class: 'knapp', text: VL.t('traff.ny'), onclick: () => formular(null) })),
       kommande.length ? el('div', { class: 'traffar' }, kommande.map(t => kort(t, idag, t.id === markera))) : el('p', { class: 'tomlage', text: VL.t('traff.inga') }),
