@@ -31,7 +31,12 @@
       const qr = document.getElementById('kod-qr'); qr.src = data.totp.qr_code; qr.hidden = false;
       document.getElementById('kod-info').hidden = false;
       const h = document.getElementById('kod-hemlig'); h.hidden = false;
-      h.replaceChildren(VL.el('span', { text: VL.t('auth.hemlig') + ' ' }), VL.el('code', { text: data.totp.secret }));
+      // På telefonen går QR-koden inte att skanna (den syns ju på samma skärm): en knapp öppnar appen med kontot ifyllt.
+      const kopiera = async () => { try { await navigator.clipboard.writeText(data.totp.secret); VL.toast(VL.t('auth.kopierad')); } catch (e) { VL.toast(VL.text.gruppera(data.totp.secret)); } };
+      h.replaceChildren(VL.el('span', { text: VL.t('auth.hemlig') + ' ' }), VL.el('code', { text: VL.text.gruppera(data.totp.secret) }),
+        VL.el('p', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' } },
+          VL.session.platform(navigator.userAgent, false) === 'dator' ? null : VL.el('a', { class: 'knapp', href: data.totp.uri, text: VL.t('auth.oppna_app') }),
+          VL.el('button', { type: 'button', class: 'knapp knapp--sekundar', text: VL.t('auth.kopiera'), onclick: kopiera })));
     }
     document.getElementById('f-kod').onsubmit = async ev => {
       ev.preventDefault();
