@@ -62,15 +62,47 @@
     VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); VL.notis && VL.notis.skicka('text', { ...m, title: titel.value.trim() }); await ladda(); } });
   }
 
+  // Rutan "Bilder": filmer märks ▶ + längd, ljud ♪. Tryck = välj omslag; "Välj flera" = markera och ta bort många på en gång.
   function bildDialog() {
     const m = VL.minneSida.data, u = VL.minneSida.urls;
-    const tummar = el('div', { class: 'tummar' }, m.media.map(x => el('div', {},
-      el('img', { src: u[x.thumb_path], alt: '', class: m.cover_media_id === x.id ? 'omslag' : '', title: VL.t('red.omslag'), onclick: async () => { await VL.api.setCover(m.id, x.id); await ladda(); d.close(); } }),
-      el('button', { type: 'button', text: '×', 'aria-label': VL.t('red.ta_bort_bild'), onclick: async () => { if (await VL.confirmDialog(VL.t('red.ta_bort_bild') + '?')) { await VL.api.removeMedia(x); await ladda(); d.close(); } } }),
-      el('button', { type: 'button', style: { left: '4px', right: 'auto' }, text: '♥', title: VL.t('meny.parbild'), onclick: async () => { await VL.api.updateSettings({ couple_path: x.thumb_path }); VL.toast(VL.t('admin.sparat')); } }))));
+    const valda = new Set();
+    let valjer = false;
+    const tryck = x => async () => {
+      if (valjer) { if (valda.has(x.id)) valda.delete(x.id); else valda.add(x.id); uppd(); return; }
+      await VL.api.setCover(m.id, x.id); await ladda(); d.close();
+    };
+    const tumme = x => el('div', { 'data-id': x.id },
+      x.thumb_path ? el('img', { src: u[x.thumb_path], alt: '', class: m.cover_media_id === x.id ? 'omslag' : '', title: VL.t('red.omslag'), onclick: tryck(x) })
+        : el('div', { class: 'tumme__tom', text: '♪', onclick: tryck(x) }),
+      VL.urval.marke(x) ? el('span', { class: 'tumme__typ', text: VL.urval.marke(x) }) : null,
+      el('span', { class: 'tumme__bock', text: '✓', 'aria-hidden': 'true' }),
+      el('button', { type: 'button', class: 'tumme__bort', text: '×', 'aria-label': VL.t('red.ta_bort_bild'), onclick: async () => { if (await VL.confirmDialog(VL.t('red.ta_bort_bild') + '?')) { await VL.api.removeMedia(x); VL.notis && VL.notis.skicka('bort', m, 1); await ladda(); d.close(); } } }),
+      el('button', { type: 'button', class: 'tumme__par', text: '♥', title: VL.t('meny.parbild'), onclick: async () => { await VL.api.updateSettings({ couple_path: x.thumb_path }); VL.toast(VL.t('admin.sparat')); } }));
+    const tummar = el('div', { class: 'tummar' }, m.media.map(tumme));
+    const valjKnapp = el('button', { type: 'button', class: 'knapp knapp--sekundar', text: VL.t('urval.valj'), onclick: () => { valjer = !valjer; if (!valjer) valda.clear(); uppd(); } });
+    const snabb = k => el('button', { type: 'button', class: 'lank', text: VL.t('urval.' + k), onclick: () => { valda.clear(); if (k !== 'ingen') VL.urval.valj(m.media, k).forEach(id => valda.add(id)); uppd(); } });
+    const bortKnapp = el('button', { type: 'button', class: 'knapp fara', onclick: async () => {
+      const rader = m.media.filter(x => valda.has(x.id));
+      if (!rader.length || !(await VL.confirmDialog(VL.t('urval.fraga', { vad: VL.urval.beskriv(rader) })))) return;
+      bortKnapp.disabled = true;
+      try { await VL.api.removeMediaMany(rader); VL.notis && VL.notis.skicka('bort', m, rader.length); await ladda(); d.close(); }
+      catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); bortKnapp.disabled = false; }
+    } });
+    const valRad = el('div', { class: 'urval-rad' }, el('small', { class: 'dampad', text: VL.t('urval.tips') }),
+      el('div', { class: 'urval-snabb' }, snabb('alla'), snabb('filmer'), snabb('bilder'), snabb('ingen')), bortKnapp);
+    function uppd() {
+      tummar.classList.toggle('valjer', valjer);
+      [...tummar.children].forEach(t => t.classList.toggle('vald', valda.has(t.dataset.id)));
+      valjKnapp.textContent = VL.t(valjer ? 'urval.klar' : 'urval.valj');
+      valRad.hidden = !valjer;
+      bortKnapp.textContent = VL.t('urval.ta_bort', { n: valda.size });
+      bortKnapp.disabled = !valda.size;
+    }
+    uppd();
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
-    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
+    const topp = el('div', { class: 'urval-topp' }, el('span', { class: 'dampad', text: VL.urval.sammanfattning(m.media) }), m.media.length ? valjKnapp : null);
+    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, topp, valRad, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
   }
 
   function datumDialog() {
@@ -161,5 +193,5 @@
       location.href = 'minne.html?id=' + mem.id; } });
   }
 
-  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp };
+  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp, bildDialog };
 })(window.VL);

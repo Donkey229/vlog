@@ -8,6 +8,7 @@
   const main = document.getElementById('innehall');
   const id = new URLSearchParams(location.search).get('id') || '';
   let valdDag = null;
+  let mediaFlik = 'alla';   // Alla · Bilder · Filmer över galleriet
   const visuell = m => m.kind !== 'audio';
 
   async function ladda() {
@@ -110,22 +111,27 @@
         el('button', { type: 'button', class: 'bildspel__fore', 'aria-label': VL.t('red.bildspel_fore'), text: '‹', onclick: () => steg(-1) }),
         el('button', { type: 'button', class: 'bildspel__nasta', 'aria-label': VL.t('red.bildspel_nasta'), text: '›', onclick: () => steg(1) }));
     }
+    const forfattare = personer[VL.text.skribent(data)];   // den som senast ändrade
     const block = el('div', { class: 'block' },
       el('div', { class: 'block__bild' }, bildDel),
       el('div', { class: 'block__text' }, data.title ? el('h2', { class: 'block__titel', 'data-roll': 'titel', text: data.title }) : null,
         data.story ? el('p', { class: 'block__berattelse', 'data-roll': 'text', text: data.story }) : null,
-        data.story && personer[data.created_by] ? el('span', { class: 'av-rad', text: VL.t('minne.skrivet_av', { namn: personer[data.created_by].display_name }) }) : null));
+        data.story && forfattare ? el('span', { class: 'av-rad', text: VL.t('minne.skrivet_av', { namn: forfattare.display_name }) }) : null));
     VL.style.applyStyle(block, s);
     if (data.story || data.title) kropp.append(block);
     // ljud
     const ljud = data.media.filter(m => m.kind === 'audio');
     if (ljud.length) kropp.append(el('div', { class: 'ljudlista' }, ljud.map(a => el('figure', {}, el('figcaption', { text: '♪ ' + (a.caption || VL.t('minne.ljud')) }), el('audio', { controls: true, preload: 'none', src: urls[a.path] })))));
-    // bilder och filmer per dag
+    // bilder och filmer per dag – med flikar Alla · Bilder · Filmer när minnet har båda
+    const flikar = VL.urval ? VL.urval.galleriFlikar(alla, mediaFlik, k => { mediaFlik = k; rita(); }) : null;
+    if (!flikar) mediaFlik = 'alla';   // t.ex. efter att alla filmer tagits bort
+    if (flikar) kropp.append(flikar);
     (valdDag ? [valdDag] : dagar).forEach(k => {
-      const lista = data.media.filter(m => m.day === k && visuell(m));
+      const dagens = data.media.filter(m => m.day === k && visuell(m));
+      const lista = VL.urval ? VL.urval.filtrera(dagens, mediaFlik) : dagens;
       if (!lista.length) return;
       const forstaTid = lista.find(m => m.taken_at)?.taken_at;
-      kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(k)) + (forstaTid ? ' · ' + new Intl.DateTimeFormat(VL.locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(forstaTid)) : '') }), VL.t('minne.bilder', { n: lista.length })),
+      kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(k)) + (forstaTid ? ' · ' + new Intl.DateTimeFormat(VL.locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(forstaTid)) : '') }), VL.urval ? VL.urval.sammanfattning(lista) : VL.t('minne.bilder', { n: lista.length })),
         galleri(lista, urls));
     });
     // YouTube / Instagram / TikTok
