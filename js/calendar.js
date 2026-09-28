@@ -47,5 +47,14 @@
     }
     return { weeks, bands };
   }
-  VL.calendar = { buildMonth };
+  // Vad ett tryck på en dag gör: öppna minnet om det finns, annars skapa ett nytt den dagen (bara admin/redaktör).
+  // Ordning: minne > träff (📍) > nytt minne.
+  const dagMal = (c, kanSkapa, harTraff = false) => (c.memoryIds.length ? 'minne' : harTraff ? 'traff' : kanSkapa ? 'ny' : null);
+  // Antal bandrader per vecka – banden ligger i en egen remsa under dagarna (täcker aldrig datum eller bilder).
+  function banor(bands) {
+    const ut = {};
+    bands.forEach(b => { ut[b.week] = Math.max(ut[b.week] || 0, b.lane + 1); });
+    return ut;
+  }
+  VL.calendar = { buildMonth, dagMal, banor };
 })(window.VL);

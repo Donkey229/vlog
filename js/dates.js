@@ -58,5 +58,20 @@
     const langd = m => daysBetween(m.start_date, m.end_date || m.start_date);
     return tacker.sort((a, b) => langd(a) - langd(b))[0] || null;
   }
-  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay, valjImportMinne };
+  // Lägg ihop dagar till en händelse: minnen inom två veckor före/efter som man får slå ihop (admin: alla, redaktör: egna –
+  // källorna tas bort, samma regel som i databasen), i datumordning.
+  function ihopKandidater(huvuden, m, prof, dagar = 14) {
+    const fran = addDays(m.start_date, -dagar), till = addDays(m.end_date || m.start_date, dagar);
+    return huvuden.filter(h => h.id !== m.id && h.start_date <= till && (h.end_date || h.start_date) >= fran
+      && prof && (prof.role === 'admin' || h.created_by === prof.id))
+      .sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0));
+  }
+  // Datumspannet som täcker minnet och alla valda (slut = null när det blir en enda dag).
+  function nyttSpann(m, valda) {
+    const alla = [m, ...valda];
+    const start = alla.map(x => x.start_date).sort()[0];
+    const slut = alla.map(x => x.end_date || x.start_date).sort().pop();
+    return { start, slut: slut !== start ? slut : null };
+  }
+  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay, valjImportMinne, ihopKandidater, nyttSpann };
 })(window.VL);
