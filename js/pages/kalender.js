@@ -20,7 +20,7 @@
       personer[VL.text.skribent(r)] ? el('small', { class: 'av', text: VL.t('minne.skrivet_av', { namn: personer[VL.text.skribent(r)].display_name }) }) : null))));
   const tomt = () => el('p', { class: 'tomlage', text: VL.t('kal.tom') });
   const antal = Math.min(600, Math.max(60, parseInt(q.get('antal'), 10) || 60));
-  const visaFler = rader => rader.length >= antal ? el('p', { style: { textAlign: 'center', marginTop: '18px' } }, el('a', { class: 'knapp knapp--sekundar', href: (() => { const u = new URLSearchParams(location.search); u.set('antal', antal + 60); return 'index.html?' + u; })(), text: VL.t('kal.visa_fler') })) : null;
+  const visaFler = rader => rader.length >= antal && antal < 600 ? el('p', { style: { textAlign: 'center', marginTop: '18px' } }, el('a', { class: 'knapp knapp--sekundar', href: (() => { const u = new URLSearchParams(location.search); u.set('antal', antal + 60); return 'index.html?' + u; })(), text: VL.t('kal.visa_fler') })) : null;
 
   const senaste = await VL.api.recent(24);
   VL.renderMosaic(senaste.map(r => r.thumb).filter(Boolean));
@@ -76,12 +76,24 @@
     const kat = kategorier.some(k => k.slug === q.get('kat')) ? q.get('kat') : null;
     const plats = (q.get('plats') || '').trim().slice(0, 80) || null;
     const rader = await VL.api.recent(antal, kat, false, plats);
-    VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.tidslinje') }),
+    // Väg (som en tidslinje i en skolbok) eller den vanliga listan
+    const somLista = q.get('visa') === 'lista';
+    const lank = visa => { const u = new URLSearchParams(location.search); if (visa === 'lista') u.set('visa', 'lista'); else u.delete('visa'); return 'index.html?' + u; };
+    const vaxla = el('div', { class: 'chips vag-vaxla' },
+      el('a', { class: somLista ? '' : 'pa', href: lank('vag'), text: '〰 ' + VL.t('vag.vag') }),
+      el('a', { class: somLista ? 'pa' : '', href: lank('lista'), text: '☰ ' + VL.t('vag.lista') }));
+    const vagen = el('div', { class: 'vag-behallare' });
+    VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.tidslinje') }), vaxla,
       plats ? el('div', { class: 'chips', style: { marginTop: '14px' } }, el('a', { class: 'pa', href: 'index.html?vy=platser', text: VL.t('platser.filter', { plats }) + ' ×' })) : null,
       el('div', { class: 'chips', style: { marginTop: '14px' } },
-        el('a', { class: kat ? '' : 'pa', href: 'index.html?vy=tidslinje', text: VL.t('kat.alla') }),
-        kategorier.map(k => el('a', { class: kat === k.slug ? 'pa' : '', href: 'index.html?vy=tidslinje&kat=' + k.slug, text: VL.api.catName(k) }))),
-      rader.length ? kortLista(rader) : tomt(), visaFler(rader));
+        el('a', { class: kat ? '' : 'pa', href: 'index.html?vy=tidslinje' + (somLista ? '&visa=lista' : ''), text: VL.t('kat.alla') }),
+        kategorier.map(k => el('a', { class: kat === k.slug ? 'pa' : '', href: 'index.html?vy=tidslinje&kat=' + k.slug + (somLista ? '&visa=lista' : ''), text: VL.api.catName(k) }))),
+      !rader.length || somLista || !VL.vag ? null : visaFler(rader),   // vägen: äldre minnen laddas vid START, alltså överst
+      !rader.length ? tomt() : somLista || !VL.vag ? kortLista(rader) : vagen, !rader.length || somLista || !VL.vag ? visaFler(rader) : null);
+    if (rader.length && !somLista && VL.vag) {
+      const kommande = VL.text.kanRedigera(prof) && VL.traffar ? await VL.api.traffar().catch(() => []) : [];
+      VL.vag.visa(vagen, VL.vag.stationer(rader, kommande, D.todayKey()), { allt: rader.length < antal });
+    }
   } else if (vy === 'platser') {
     const lista = VL.platser.lista(await VL.api.platsRader());
     VL.add(main, el('h1', { class: 'stor', text: VL.t('platser.rubrik') }),
