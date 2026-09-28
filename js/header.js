@@ -25,6 +25,7 @@
     const redaktor = prof && ['admin', 'editor'].includes(prof.role);
     const right = el('div', { class: 'top__hoger' }, sok, tema, lang,
       redaktor ? el('span', { id: 'narvaro', class: 'narvaro' }) : null,   // partnerns profil + grön prick när hon/han är inne
+      redaktor ? el('span', { id: 'klocka', class: 'klocka-plats' }) : null,   // 🔔 notiser i appen
       prof ? el('button', { type: 'button', class: 'av', title: prof.display_name, 'aria-haspopup': 'menu', text: initials(prof.display_name), onclick: ev => profilMeny(ev.currentTarget) }) : null,
       redaktor ? el('a', { class: 'knapp', href: 'index.html?nytt=1', text: VL.t('nav.nytt') }) : null,
       prof && prof.role === 'admin' ? el('a', { class: 'lank', href: 'admin.html', text: VL.t('nav.admin') }) : null,
@@ -34,9 +35,10 @@
       VL.openDialog(VL.t('red.titel_sida'), el('div', { class: 'falt' }, inp), { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateSettings({ title: inp.value.trim() || 'Emma & Jock' }); location.reload(); } });
     } }) : null;
     VL.add(top, par, titelKnapp, el('nav', { class: 'flikar', 'aria-label': VL.t('nav.meny') },
-      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), tab('om', 'nav.om', 'om.html')), right);
+      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), redaktor ? tab('traffar', 'nav.traffar', 'traffar.html') : null, tab('om', 'nav.om', 'om.html')), right);
     VL.renderFooter(s);
     if (redaktor && VL.narvaro) VL.api.profiles().then(p => VL.narvaro.starta(prof, p)).catch(() => {});
+    if (redaktor && VL.klocka) VL.klocka.starta();
     if (redaktor && VL.notis) setTimeout(VL.notis.erbjud, 1500);   // fråga en gång om notiser (kräver ett tryck)
     return s;
   };
@@ -44,7 +46,7 @@
   // Profilmeny: logga ut här, eller på alla enheter (t.ex. om en telefon kommit bort).
   function profilMeny(knapp) {
     const gammal = document.getElementById('profilmeny'); if (gammal) { gammal.remove(); return; }
-    const ut = async scope => { if (VL.notis) await VL.notis.stangAv(true).catch(() => {}); await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
+    const ut = async scope => { if (VL.notis) await VL.notis.stangAv(true).catch(() => {}); try { if ('clearAppBadge' in navigator) navigator.clearAppBadge(); } catch (e) {} await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
     // Platsdelning är frivillig och av som standard; bara medan appen är öppen, sparas aldrig.
     const plats = VL.narvaro && VL.el('button', { type: 'button', role: 'menuitem', text: VL.t(VL.narvaro.delar() ? 'narvaro.dela_av' : 'narvaro.dela_pa'), onclick: () => {
       const pa = !VL.narvaro.delar(); VL.narvaro.satDela(pa); if (pa) VL.toast(VL.t('narvaro.delar_nu')); m.remove(); } });

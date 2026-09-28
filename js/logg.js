@@ -17,6 +17,7 @@
     }
     if (what === 'memories') return { ikon: '📝', nyckel: 'logg.minne_' + action, minne: action === 'delete' ? null : id(rad.ref), detalj: summary || '' };
     if (what === 'comments') return { ikon: '💬', nyckel: action === 'delete' ? 'logg.kommentar_delete' : summary === 'approved' ? 'logg.kommentar_godkand' : 'logg.kommentar_update', detalj: '' };
+    if (what === 'traffar') return { ikon: '📍', nyckel: 'logg.traff_' + action, lank: action !== 'delete' && id(rad.ref) ? 'traffar.html?id=' + rad.ref : null, detalj: summary || '' };
     if (what === 'links') return { ikon: '🔗', nyckel: 'logg.lank_' + action, detalj: summary || '' };
     if (what === 'about_page') return { ikon: 'ℹ', nyckel: 'logg.om', detalj: '' };
     if (what === 'settings') return { ikon: '⚙', nyckel: 'logg.installningar', detalj: '' };
@@ -35,7 +36,8 @@
       ? VL.el('span', { class: 'logg__bild' }, VL.el('img', { src, alt: '', loading: 'lazy' }), b.film ? VL.el('span', { class: 'logg__spela', text: '▶' }) : null)
       : VL.el('span', { class: 'logg__bild logg__ikon', text: b.ikon, title: r.what === 'media' ? VL.t('logg.borttagen') : '' });
     const text = VL.el('span', { class: 'logg__text' }, VL.el('b', { text: mening }), VL.el('small', { text: (om ? om + ' · ' : '') + tid }));
-    return b.minne ? VL.el('a', { class: 'logg__rad', href: 'minne.html?id=' + b.minne }, bild, text) : VL.el('div', { class: 'logg__rad' }, bild, text);
+    const href = b.lank || (b.minne ? 'minne.html?id=' + b.minne : null);
+    return href ? VL.el('a', { class: 'logg__rad', href }, bild, text) : VL.el('div', { class: 'logg__rad' }, bild, text);
   }
   VL.logg = { beskriv, rad };
 })(window.VL);

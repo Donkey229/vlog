@@ -209,6 +209,17 @@
     must(await sb.from('memories').select('id,title,start_date,end_date').in('id', ids)).forEach(r => { map[r.id] = r.title || VL.dates.formatRange(r.start_date, r.end_date); });
     return map;
   }
+  // notisklockan: senaste notiserna, antal olästa, markera som läst (bara egna – databasen ser till det)
+  const notiser = async (n = 20) => must(await sb.from('notiser').select('id,text,url,created_at,read_at').order('created_at', { ascending: false }).limit(n));
+  async function olastaNotiser() { const { count, error } = await sb.from('notiser').select('id', { count: 'exact', head: true }).is('read_at', null); if (error) throw error; return count || 0; }
+  const lasNotis = async id => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).eq('id', id).is('read_at', null));
+  const lasNotiserMedUrl = async url => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).eq('url', url).is('read_at', null));
+  const lasAllaNotiser = async () => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).is('read_at', null));
+  // träffar
+  const traffar = async () => must(await sb.from('traffar').select('id,title,day,at_time,city,venue,address,note,created_by,updated_by').order('day'));
+  const nyTraff = async t => must(await sb.from('traffar').insert(t).select('id,title,day,at_time,city,venue,address,note').single());
+  const andraTraff = async (id, t) => must(await sb.from('traffar').update(t).eq('id', id).select('id,title,day,at_time,city,venue,address,note').single());
+  const taBortTraff = async id => must(await sb.from('traffar').delete().eq('id', id));
   const activity = async (n = 50) => must(await sb.from('activity').select('*').order('at', { ascending: false }).limit(n));
   async function admin(action, payload = {}) {
     const { data, error } = await sb.functions.invoke('admin-users', { body: { action, site: VL.config.site, ...payload } });
@@ -222,5 +233,5 @@
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
     createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
-    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
+    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, notiser, olastaNotiser, lasNotis, lasNotiserMedUrl, lasAllaNotiser, traffar, nyTraff, andraTraff, taBortTraff, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
 })(window.VL);

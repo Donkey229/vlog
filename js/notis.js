@@ -5,7 +5,7 @@ window.VL = window.VL || {};
   const FRAGAT = 'vl-notis-fragat';
   function text({ namn, typ, antal, titel }) {
     const k = typ === 'bilder' ? (antal === 1 ? 'notis.bild' : 'notis.bilder') : typ === 'bort' && antal === 1 ? 'notis.bort_en' : 'notis.' + typ;
-    return VL.t(k, { namn: namn || '?', n: antal, titel: titel || VL.t('notis.vloggen') }).slice(0, 140);
+    return Array.from(VL.t(k, { namn: namn || '?', n: antal, titel: titel || VL.t('notis.vloggen') })).slice(0, 140).join('');   // hela tecken – en halv emoji avvisas av databasen
   }
   // base64url → Uint8Array (applicationServerKey)
   function nyckel(b64) {
@@ -68,7 +68,7 @@ window.VL = window.VL || {};
       const jag = await VL.api.me();
       if (!jag || !['admin', 'editor'].includes(jag.role)) return null;
       const titel = minne && (minne.title || (minne.start_date && VL.dates.formatRange(minne.start_date, minne.end_date)));
-      const url = minne && minne.id ? 'minne.html?id=' + minne.id : 'index.html';
+      const url = minne && minne.url ? minne.url : minne && minne.id ? 'minne.html?id=' + minne.id : 'index.html';
       return (await VL.api.notis(text({ namn: jag.display_name, typ, antal, titel }), url)) || null;
     })();
     jobb.catch(() => {});   // ett sent fel efter tidsgränsen ska inte bli ett ohanterat fel

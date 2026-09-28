@@ -60,7 +60,7 @@
     const { dialog } = VL.openDialog(text, VL.el('p', { text: '' }), { okText: VL.t('minne.ta_bort'), onOk: () => { svar = true; } });
     dialog.addEventListener('close', () => res(svar));
   });
-  VL.safeNext = s => /^(index|minne|admin)\.html(\?[\w=&%.-]*)?$/.test(s || '') ? s : 'index.html';
+  VL.safeNext = s => /^(index|minne|admin|traffar)\.html(\?[\w=&%.-]*)?$/.test(s || '') ? s : 'index.html';
   VL.guard = async function ({ allowAnon = false } = {}) {
     // Länk från ett mejl som hamnat på startsidan (t.ex. inbjudan från Supabase-panelen): skicka vidare till inloggningen.
     if (new URLSearchParams(location.search).has('token_hash')) { location.replace('auth.html' + location.search); return null; }
