@@ -8,4 +8,6 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -fsS "https://lxownohxkswzhvwlaznt.supabase.co/rest/v1/settings?select=title" -H "apikey: sb_publishable_GBGlS3vEVgUaJbGaCligUg_vVJA9Xyx"
+      # blockskalär (|): kolon + mellanslag i "apikey: …" gör annars YAML-filen ogiltig
+      - run: |
+          curl -fsS "https://lxownohxkswzhvwlaznt.supabase.co/rest/v1/settings?select=title" -H "apikey: sb_publishable_GBGlS3vEVgUaJbGaCligUg_vVJA9Xyx"
