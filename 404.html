@@ -1,7 +1,11 @@
 <!doctype html>
 <html lang="sv"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ctOUtrn7LPqOtdI9yxbkbQPH3B0KMHQSRxeGH+My0Hs='; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'">
+<!-- GitHub Pages visar den här sidan för alla okända adresser, även djupa som /vlog/minne/123, där relativa css/, js/ och index.html
+     pekar fel. Skriptet sätter <base> till sajtens rot innan något laddas: första mappen på *.github.io (projektsida), annars /
+     (egen domän). Ändras skriptet måste hashen i CSP:n ovan räknas om – testet i tests/fix_start.test.js skriver ut den nya. -->
+<script>(function(){var s=location.pathname.split('/')[1],b=document.createElement('base');b.href=/\.github\.io$/.test(location.hostname)&&s?'/'+s+'/':'/';document.head.appendChild(b)})()</script>
 <meta name="robots" content="noindex"><title>404</title><link rel="stylesheet" href="css/vlogg.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="img/app-180.png">

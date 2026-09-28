@@ -10,15 +10,24 @@ function farsk(req) {
   return req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: 'manual' }) : new Request(req, { cache: 'no-cache' });
 }
 // Push-notis → vad som visas. Öppnar bara vloggens egna sidor (inget annat går att smyga in via notisen).
+// En reaktion (❤️ …) har avsändarens namn som rubrik och öppnar hjärtats ruta (index.html#hjarta).
 function notisVisning(d) {
-  const url = /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html)$/.test((d && d.url) || '') ? d.url : 'index.html';
-  return { title: 'Emma & Jock', options: { body: String((d && d.text) || '').slice(0, 140), icon: 'img/app-192.png', badge: 'img/app-192.png', tag: url, renotify: true, data: { url } } };
+  const url = /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html(#hjarta)?)$/.test((d && d.url) || '') ? d.url : 'index.html';
+  const title = Array.from(String((d && d.title) || '').trim()).slice(0, 40).join('') || 'Emma & Jock';
+  const tag = d && d.tag === 'reaktion' ? 'reaktion' : url;
+  return { title, options: { body: String((d && d.text) || '').slice(0, 140), icon: 'img/app-192.png', badge: 'img/app-192.png', tag, renotify: true, data: { url } } };
+}
+// Siffran på appikonen (olästa reaktioner + händelser) följer med notisen, så den stämmer även när appen är stängd.
+function appSiffra(d, nav) {
+  const n = d && d.antal;
+  if (!Number.isInteger(n) || n < 0 || !nav || !('setAppBadge' in nav)) return Promise.resolve();
+  return (n ? nav.setAppBadge(n) : nav.clearAppBadge()).catch(() => {});
 }
 self.addEventListener('push', e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
   const n = notisVisning(d);
-  e.waitUntil(Promise.all([self.registration.showNotification(n.title, n.options),
-    clients.matchAll({ type: 'window' }).then(l => l.forEach(c => c.postMessage({ typ: 'notis' })))]));   // klockan i öppna sidor
+  e.waitUntil(Promise.all([self.registration.showNotification(n.title, n.options), appSiffra(d, self.navigator),
+    clients.matchAll({ type: 'window' }).then(l => l.forEach(c => c.postMessage({ typ: 'notis' })))]));   // hjärtat i öppna sidor
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
