@@ -231,3 +231,21 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 button.av { border: 0; cursor: pointer; }
 .top__hoger { position: relative; }
 .meny--profil { top: 44px; right: 0; }
+
+/* Närvaro uppe till höger: partnerns profil med grön prick när hon/han är inne i appen */
+.narvaro { display: flex; gap: 6px; position: relative; }
+.av--narvaro { position: relative; background: var(--surface); color: var(--ink); border: 2px solid var(--line); }
+.av--narvaro .prick { position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: #b9aab2; border: 2px solid var(--surface, #fff); }
+.av--narvaro.ar-inne { border-color: #2fb36b; }
+.av--narvaro.ar-inne .prick { background: #2fb36b; }
+.meny--narvaro { top: 44px; right: 0; min-width: 190px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.meny--narvaro p { margin: 0; font-size: 13px; }
+.meny--narvaro .inne { color: #1f8f53; font-weight: 600; }
+.meny--narvaro a { font-size: 13px; }
+/* Platser */
+.kort small.plats { display: block; color: var(--muted); margin-top: 2px; }
+.hjalte__plats { display: inline-block; margin-top: 6px; color: #fff; text-decoration: none; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.platslista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 18px; }
+.platslista a { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.platslista a:hover { border-color: var(--rose); }
+.platslista small { color: var(--muted); }
