@@ -9,5 +9,7 @@
     }
     return Math.max(1, Math.ceil(words / wpm));
   }
-  VL.text = { readingMinutes };
+  // Lång nyckel i grupper om fyra (lättare att läsa och skriva av; Authenticator-appar godtar mellanslagen).
+  const gruppera = s => String(s || '').replace(/(.{4})(?=.)/g, '$1 ');
+  VL.text = { readingMinutes, gruppera };
 })(window.VL);
