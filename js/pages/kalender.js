@@ -37,6 +37,13 @@
     const manad = new Intl.DateTimeFormat(VL.locale(), { month: 'long', year: 'numeric' }).format(D.parseDay(forsta));
     const ga = delta => { const d = new Date(year, month0 + delta, 1); location.search = '?vy=kalender&man=' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
     const iManaden = minnen.filter(x => (x.end_date || x.start_date) >= forsta && x.start_date <= sista).length;
+    const allaTraffar = VL.text.kanRedigera(prof) && VL.traffar ? await VL.api.traffar().catch(() => []) : [];
+    const traffPaDag = {}; allaTraffar.forEach(t => { traffPaDag[t.day] = traffPaDag[t.day] || t; });
+    const nasta = VL.traffar ? VL.traffar.nasta(allaTraffar, D.todayKey()) : null;
+    if (nasta) main.append(el('a', { class: 'nasta-traff', href: 'traffar.html?id=' + nasta.id },
+      el('small', { text: VL.t('traff.nasta') + ' · ' + VL.traffar.nedrakning(nasta.day, D.todayKey()) }),
+      el('strong', { text: '📍 ' + nasta.title }),
+      el('span', { text: VL.traffar.datumText(nasta) + (VL.traffar.plats(nasta) ? ' · ' + VL.traffar.plats(nasta) : '') })));
     main.append(el('div', { class: 'kalhuvud' },
       el('div', {}, el('h1', { class: 'stor', text: manad.charAt(0).toUpperCase() + manad.slice(1) }), el('p', { class: 'dampad', text: VL.t('kal.antal', { n: iManaden }) + ' · ' + VL.t('kal.tips') })),
       el('div', { class: 'kalnav' }, el('button', { text: '‹', 'aria-label': '‹', onclick: () => ga(-1) }), el('button', { text: VL.t('kal.idag'), onclick: () => { location.search = '?vy=kalender'; } }), el('button', { text: '›', 'aria-label': '›', onclick: () => ga(1) }))));
@@ -46,8 +53,9 @@
       const rad = el('div', { class: 'kal__vecka' }, vecka.map(c => {
         const cls = 'dag' + (c.inMonth ? '' : ' dag--ute') + (c.isToday ? ' dag--idag' : '') + (c.thumb ? ' dag--har' : '');
         const inner = [el('span', { class: 'dag__n', text: c.day }), c.thumb ? el('img', { src: c.thumb, alt: '', loading: 'lazy' }) : null,
-          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null];
-        return c.memoryIds.length ? el('a', { class: cls, href: oppna(c.memoryIds[0]), 'aria-label': c.key }, inner) : el('div', { class: cls }, inner);
+          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? el('span', { class: 'dag__traff', text: '📍', title: traffPaDag[c.key].title }) : null];
+        return c.memoryIds.length ? el('a', { class: cls, href: oppna(c.memoryIds[0]), 'aria-label': c.key }, inner)
+          : traffPaDag[c.key] ? el('a', { class: cls, href: 'traffar.html?id=' + traffPaDag[c.key].id, 'aria-label': c.key }, inner) : el('div', { class: cls }, inner);
       }));
       modell.bands.filter(b => b.week === w).forEach(b => rad.append(el('a', {
         class: 'band band--' + b.kind + (b.continuesBefore ? ' band--fore' : '') + (b.continuesAfter ? ' band--efter' : ''), href: oppna(b.memoryId),
