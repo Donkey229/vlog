@@ -29,8 +29,8 @@
     return { date: null, source: 'saknas' };
   }
 
-  function formatRange(start, end) {
-    const loc = VL.locale ? VL.locale() : 'sv-SE';
+  // loc: ett annat språk än det valda (notisen skrivs på mottagarens språk)
+  function formatRange(start, end, loc = VL.locale ? VL.locale() : 'sv-SE') {
     const f = (o, d) => new Intl.DateTimeFormat(loc, o).format(d);
     const a = parseDay(start);
     if (!end || end === start) return f({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, a);

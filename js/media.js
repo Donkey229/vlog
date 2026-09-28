@@ -19,7 +19,7 @@
     } finally { URL.revokeObjectURL(url); }
     const c = document.createElement('canvas'); c.width = 480; c.height = 480;
     const g = c.getContext('2d');
-    const grad = g.createLinearGradient(0, 0, 480, 480); grad.addColorStop(0, '#e84f86'); grad.addColorStop(1, '#2b1a24');
+    const grad = g.createLinearGradient(0, 0, 480, 480); grad.addColorStop(0, '#c73e70'); grad.addColorStop(1, '#4a1226');
     g.fillStyle = grad; g.fillRect(0, 0, 480, 480);
     g.fillStyle = '#fff'; g.font = '200px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('♪', 240, 220);
     g.font = '28px sans-serif'; g.fillText(file.name.replace(/\.[^.]+$/, '').slice(0, 26), 240, 400);

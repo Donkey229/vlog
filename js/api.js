@@ -94,7 +94,7 @@
   const updateMemory = async (id, patch) => must(await sb.from('memories').update(patch).eq('id', id));
   async function deleteMemory(m) {
     const paths = m.media.flatMap(x => [x.path, x.thumb_path, x.poster_path]).filter(Boolean);
-    if (paths.length) must(await sb.storage.from('media').remove(paths));
+    for (const omg of VL.urval.omgangar(paths, 1000)) must(await sb.storage.from('media').remove(omg));   // lagringens gräns: 1000 sökvägar per anrop
     must(await sb.from('memories').delete().eq('id', m.id));
     // Rester i minnets mapp (t.ex. från en avbruten uppladdning) – men inte filer som flyttats till ett annat minne.
     const { data: lista } = await sb.storage.from('media').list('m/' + m.id, { limit: 1000 });
@@ -229,9 +229,30 @@
   // push-notiser: spara/ta bort den här enheten, och be servern skicka en notis till de andra
   const sparaPrenumeration = async (sub, enhet) => must(await sb.rpc('spara_prenumeration', { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_enhet: enhet || '' }));
   const taBortPrenumeration = async endpoint => must(await sb.from('push_subscriptions').delete().eq('endpoint', endpoint));
+  // "Logga ut från alla enheter": alla mina enheters rader (databasen låter bara var och en ta bort sina egna)
+  const taBortAllaPrenumerationer = async userId => must(await sb.from('push_subscriptions').delete().eq('user_id', userId));
+  // text = { sv, en, th } – notis-funktionen väljer mottagarens språk (testnotisen: en färdig text)
+  // Hjärtat: reaktioner mellan Jock och Emma (databasen släpper bara igenom avsändaren och mottagaren).
+  const minId = async () => { const { data: { session } } = await sb.auth.getSession(); return session ? session.user.id : null; };
+  const REAKTION = 'id,from_id,to_id,emoji,text,created_at,read_at';
+  const reaktioner = async (n = 50) => must(await sb.from('reaktioner').select(REAKTION).order('created_at', { ascending: false }).limit(n));
+  const skickaReaktion = async ({ to_id, emoji, text }) => must(await sb.from('reaktioner').insert({ to_id, emoji, text }).select(REAKTION).single());
+  async function lasReaktioner() { const id = await minId(); if (id) must(await sb.from('reaktioner').update({ read_at: new Date().toISOString() }).eq('to_id', id).is('read_at', null)); }
+  async function olastaReaktioner() {
+    const id = await minId(); if (!id) return 0;
+    const { count, error } = await sb.from('reaktioner').select('id', { count: 'exact', head: true }).eq('to_id', id).is('read_at', null);
+    if (error) throw error; return count || 0;
+  }
+  const notisReaktion = async id => { const { data, error } = await sb.functions.invoke('notis', { body: { reaktion: true, id } }); if (error) throw error; return data; };
+  // Eget foto bakom stora hjärtat (fast tills man byter) och fotona att välja bland (även för profilbilden).
+  const bakgrund = async () => { const r = must(await sb.from('hjarta_bakgrund').select('path').maybeSingle()); return r ? r.path : null; };
+  const sattBakgrund = async path => must(await sb.from('hjarta_bakgrund').upsert({ path }, { onConflict: 'user_id' }));
+  async function taBortBakgrund() { const id = await minId(); if (id) must(await sb.from('hjarta_bakgrund').delete().eq('user_id', id)); }
+  const foton = async (n = 300) => must(await sb.from('media').select('id,path,thumb_path,day').eq('kind', 'photo').order('day', { ascending: false }).limit(n));
   const notis = async (text, url, test = false, endpoint = null) => { const { data, error } = await sb.functions.invoke('notis', { body: { text, url, test, endpoint } }); if (error) throw error; return data; };
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
     createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
-    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, notiser, olastaNotiser, lasNotis, lasNotiserMedUrl, lasAllaNotiser, traffar, nyTraff, andraTraff, taBortTraff, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
+    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, notiser, olastaNotiser, lasNotis, lasNotiserMedUrl, lasAllaNotiser, traffar, nyTraff, andraTraff, taBortTraff, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, taBortAllaPrenumerationer, notis,
+    reaktioner, skickaReaktion, lasReaktioner, olastaReaktioner, notisReaktion, bakgrund, sattBakgrund, taBortBakgrund, foton };
 })(window.VL);

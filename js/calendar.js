@@ -14,20 +14,20 @@
       const row = [];
       for (let c = 0; c < 7; c++) {
         const key = D.addDays(gridStart, w * 7 + c);
-        const cell = { key, day: D.parseDay(key).getDate(), inMonth: D.parseDay(key).getMonth() === month0, isToday: key === today, memoryIds: [], photos: 0, videos: 0, thumb: null };
+        const cell = { key, day: D.parseDay(key).getDate(), inMonth: D.parseDay(key).getMonth() === month0, isToday: key === today, memoryIds: [], memoryId: null, photos: 0, videos: 0, thumb: null };
         cells[key] = cell; row.push(cell);
       }
       weeks.push(row);
     }
-    const bands = [];
+    const bands = [], kandidater = {};
     const sorted = [...memories].sort((a, b) => a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0);
     for (const m of sorted) {
       const s = m.start_date, e = m.end_date || m.start_date;
       for (const key of D.rangeDays(s, e)) {
         const c = cells[key]; if (!c) continue;
         c.memoryIds.push(m.id);
-        const d = (m.days || {})[key];
-        if (d) { c.photos += d.photos || 0; c.videos += d.videos || 0; if (!c.thumb && d.thumb) c.thumb = d.thumb; }
+        const d = (m.days || {})[key] || {};
+        (kandidater[key] || (kandidater[key] = [])).push({ id: m.id, langd: D.daysBetween(s, e), thumb: d.thumb || null, photos: d.photos || 0, videos: d.videos || 0 });
       }
       if (e === s) continue;
       const vs = s < gridStart ? gridStart : s, ve = e > gridEnd ? gridEnd : e;
@@ -37,6 +37,12 @@
         bands.push({ memoryId: m.id, title: m.title, kind: m.kind, week, col, span, lane: 0, continuesBefore: cur > s, continuesAfter: D.addDays(cur, span - 1) < e });
         cur = D.addDays(cur, span);
       }
+    }
+    // Vad rutan öppnar: det kortaste minnet den dagen (ett dagsminne före resan, som har ett eget band), bland lika långa det med bild.
+    // Bilden, antalet och ▶ i rutan kommer från just det minnet – annars visar rutan ett minnes bilder men öppnar ett annat.
+    for (const [key, lista] of Object.entries(kandidater)) {
+      const [valt] = lista.sort((a, b) => a.langd - b.langd || !a.thumb - !b.thumb);
+      Object.assign(cells[key], { memoryId: valt.id, thumb: valt.thumb, photos: valt.photos, videos: valt.videos });
     }
     const used = {};
     for (const b of bands) {

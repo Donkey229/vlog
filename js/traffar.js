@@ -4,7 +4,7 @@
   const dagarMellan = (fran, till) => Math.round((D.parseDay(till) - D.parseDay(fran)) / 86400000);
   function nedrakning(dag, idag) {
     const n = dagarMellan(idag, dag);
-    return n === 0 ? VL.t('traff.idag') : n === 1 ? VL.t('traff.imorgon') : n > 1 ? VL.t('traff.om', { n }) : VL.t('traff.sedan', { n: -n });
+    return n === 0 ? VL.t('traff.idag') : n === 1 ? VL.t('traff.imorgon') : n > 1 ? VL.t('traff.om', { n }) : VL.tn('traff.sedan', -n);
   }
   const plats = t => [t.venue, t.address, t.city].map(s => (s || '').trim()).filter(Boolean).join(', ');
   const kartlank = t => (plats(t) ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(plats(t)) : null);
@@ -27,5 +27,7 @@
     address: (f.address || '').trim(), note: (f.note || '').trim() });
   const datumText = t => new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(t.day))
     + (klockslag(t) ? ' · ' + VL.t('traff.kl', { tid: klockslag(t) }) : '');
-  VL.traffar = { nedrakning, plats, kartlank, klockslag, dela, nasta, kontrollera, rad, datumText };
+  // i kalenderns dagruta: träffens namn i ett blått moln (Jock 2026-09-28 – ingen 📍)
+  const moln = t => VL.el('span', { class: 'dag__traff', title: t.title }, VL.el('span', { class: 'dag__traff-text', text: t.title }));
+  VL.traffar = { nedrakning, plats, kartlank, klockslag, dela, nasta, kontrollera, rad, datumText, moln };
 })(window.VL);

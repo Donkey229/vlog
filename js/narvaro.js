@@ -15,7 +15,11 @@ window.VL = window.VL || {};
       })
       .sort((a, b) => a.namn.localeCompare(b.namn, 'sv'));
   }
-  const delar = () => { try { return localStorage.getItem(NYCKEL) === '1'; } catch (e) { return false; } };
+  // "Dela min plats" gäller bara kontot och inloggningen där den slogs på: värdet är kontots id + inloggningens tid
+  // (VL.session). Varje utloggning glömmer tiden – så delningen är av efter nästa inloggning och slås aldrig på för
+  // någon annan som loggar in i samma webbläsare. (Äldre versioner sparade '1' för alla konton – räknas som av.)
+  const minNyckel = () => { const t = VL.session.lastLogin(); return jag && t ? jag.id + ':' + t : null; };
+  const delar = () => { try { const v = minNyckel(); return !!v && localStorage.getItem(NYCKEL) === v; } catch (e) { return false; } };
 
   let kanal = null, jag = null, plats = null, bevakning = null, personer = {};
   const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
@@ -34,35 +38,54 @@ window.VL = window.VL || {};
   function bevaka() {
     if (!navigator.geolocation || bevakning != null) return;
     bevakning = navigator.geolocation.watchPosition(
-      p => { plats = { ...VL.platser.avrunda(p.coords), tid: Date.now() }; spara(); },
+      p => {   // skickas bara när den avrundade platsen ändrats (GPS-brus ger annars en ny närvaro-uppdatering hela tiden)
+        const ny = VL.platser.avrunda(p.coords); if (plats && plats.lat === ny.lat && plats.lon === ny.lon) return;
+        plats = { ...ny, tid: Date.now() }; spara(); },
       () => { VL.toast(VL.t('narvaro.plats_nekad'), 'fel'); satDela(false); },
       { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 });
   }
   function satDela(pa) {
-    try { localStorage.setItem(NYCKEL, pa ? '1' : '0'); } catch (e) {}
+    try { const v = minNyckel(); if (pa && v) localStorage.setItem(NYCKEL, v); else localStorage.removeItem(NYCKEL); } catch (e) {}
     if (pa) bevaka();
     else { if (bevakning != null) navigator.geolocation.clearWatch(bevakning); bevakning = null; plats = null; }
     spara();
   }
+  // Utloggning: sluta bevaka platsen och lämna närvarokanalen (valet i sig glöms av satDela(false) / nästa inloggning).
+  function stoppa() {
+    if (bevakning != null) navigator.geolocation.clearWatch(bevakning);
+    if (kanal && VL.sb) Promise.resolve(VL.sb.removeChannel(kanal)).catch(() => {});
+    kanal = null; jag = null; plats = null; bevakning = null; personer = {};
+  }
 
   function rita(medlemmar) {
     const ruta = document.getElementById('narvaro'); if (!ruta) return;
+    const oppet = document.getElementById('narvarokort');   // ett öppet kort ritas om med nya uppgifter i stället för att försvinna
     ruta.replaceChildren(...medlemmar.map(m => VL.el('button', {
       type: 'button', class: 'av av--narvaro' + (m.online ? ' ar-inne' : ''), title: m.namn + ' – ' + VL.t(m.online ? 'narvaro.inne' : 'narvaro.ute'),
       'aria-label': m.namn + ' – ' + VL.t(m.online ? 'narvaro.inne' : 'narvaro.ute'), onclick: ev => kort(m, ev.currentTarget),
-    }, (m.namn || '?').trim().slice(0, 1).toUpperCase(), VL.el('i', { class: 'prick' }))));
+    }, VL.el('span', { class: 'av__bokstav', text: (m.namn || '?').trim().slice(0, 1).toUpperCase() }), VL.el('i', { class: 'prick' }))));
+    if (VL.profilbild) ruta.querySelectorAll('.av--narvaro').forEach((k, i) => { const p = personer[medlemmar[i].id]; if (p && p.avatar_path) VL.profilbild.fyll(k, p.avatar_path); });   // partnerns profilbild
+    const m = oppet && medlemmar.find(x => x.id === oppet.dataset.id);
+    if (m) ruta.append(kortet(m));
   }
-  function kort(m, knapp) {
-    const gammal = document.getElementById('narvarokort'); if (gammal) { gammal.remove(); if (gammal.dataset.id === m.id) return; }
+  function kortet(m) {
     const el = VL.el;
-    const k = el('div', { id: 'narvarokort', class: 'meny meny--narvaro', dataset: { id: m.id } },
+    return el('div', { id: 'narvarokort', class: 'meny meny--narvaro', dataset: { id: m.id } },
       el('strong', { text: m.namn }),
       el('p', { class: m.online ? 'inne' : 'dampad', text: VL.t(m.online ? 'narvaro.inne' : 'narvaro.ute') + (m.online && m.enhet ? ' · ' + VL.t('narvaro.enhet.' + m.enhet) : '') }),
       m.online && m.plats ? el('a', { href: VL.platser.kartlank(m.plats), target: '_blank', rel: 'noopener noreferrer', text: '📍 ' + VL.t('narvaro.oppna_karta') }) : null,
       m.online && !m.plats ? el('p', { class: 'dampad', text: VL.t('narvaro.ingen_plats') }) : null);
-    knapp.parentNode.append(k);
-    const bort = e => { if (!k.contains(e.target) && e.target !== knapp) { k.remove(); document.removeEventListener('click', bort, true); } };
+  }
+  function kort(m, knapp) {
+    const gammal = document.getElementById('narvarokort'); if (gammal) { gammal.remove(); if (gammal.dataset.id === m.id) return; }
+    knapp.parentNode.append(kortet(m));
+    // stängs vid tryck utanför (kortet och knapparna kan ha ritats om sedan det öppnades – därför söks de upp på nytt)
+    const bort = e => {
+      const k = document.getElementById('narvarokort');
+      if (k && (k.contains(e.target) || (e.target.closest && e.target.closest('.av--narvaro')))) return;
+      if (k) k.remove(); document.removeEventListener('click', bort, true);
+    };
     setTimeout(() => document.addEventListener('click', bort, true));
   }
-  VL.narvaro = { lista, starta, delar, satDela };
+  VL.narvaro = { lista, starta, delar, satDela, stoppa };
 })(window.VL);

@@ -63,6 +63,31 @@
     return ut;
   }
 
+  // Hur bred texten under varje station får vara, så att två grannars texter aldrig går in i varandra (vid 375 px blev
+  // "Göta kanal i" och "Emma bilade…" en enda rad). Ändstationernas text ligger inåt med ytterkanten KANT px förbi mitten,
+  // före svängen; övriga är centrerade. Ryms inte två grannar delas mellanrummet så att båda får lika bred text.
+  const KANT = 14, LUCKA = 8;
+  function textBredder(l, st) {
+    const ut = st.map(() => Infinity), rader = [];
+    const sida = p => (p.x === Math.round(l.R) ? 'h' : p.x === Math.round(l.L) ? 'v' : 'm');
+    st.forEach((s, i) => { if (s.typ !== 'nu') (rader[l.punkter[i].rad] = rader[l.punkter[i].rad] || []).push(i); });   // NU har ingen text
+    for (const rad of rader) {
+      if (!rad) continue;
+      rad.sort((a, b) => l.punkter[a].x - l.punkter[b].x);
+      // gränsen mellan grannarna; c = hur fort texten växer när gränsen flyttas (centrerad text växer åt båda håll), f = fast kant eller mitt
+      const grans = rad.slice(1).map((i, j) => {
+        const a = l.punkter[rad[j]], b = l.punkter[i], ca = sida(a) === 'm' ? 2 : 1, cb = sida(b) === 'm' ? 2 : 1;
+        const fa = sida(a) === 'v' ? a.x - KANT : a.x, fb = sida(b) === 'h' ? b.x + KANT : b.x;
+        return (ca * fa + cb * fb + (ca - cb) * LUCKA / 2) / (ca + cb);
+      });
+      rad.forEach((i, j) => {
+        const p = l.punkter[i], v = j ? grans[j - 1] + LUCKA / 2 : -Infinity, h = j < grans.length ? grans[j] - LUCKA / 2 : Infinity;
+        ut[i] = sida(p) === 'v' ? h - (p.x - KANT) : sida(p) === 'h' ? p.x + KANT - v : 2 * Math.min(p.x - v, h - p.x);
+      });
+    }
+    return ut;
+  }
+
   const kortDatum = (dag, medAr) => new Intl.DateTimeFormat(VL.locale(), medAr ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }).format(D.parseDay(dag));
   const langtDatum = dag => new Intl.DateTimeFormat(VL.locale(), { dateStyle: 'long' }).format(D.parseDay(dag));
   const SVG = 'http://www.w3.org/2000/svg';
@@ -94,6 +119,7 @@
       if (text) vag.append(VL.el('span', { class: 'vag__skylt', 'aria-hidden': 'true', style: { left: (p.x + fore.x) / 2 + 'px', top: p.y + 'px' }, text }));
     });
     const kant = p => (p.x === Math.round(l.R) ? ' vag__station--hoger' : p.x === Math.round(l.L) ? ' vag__station--vanster' : '');   // texten inåt, inte på svängen
+    const tb = textBredder(l, st), textStil = i => (isFinite(tb[i]) ? { maxWidth: Math.max(0, Math.floor(tb[i])) + 'px' } : null);
     let forraAr = null;
     const datum = dag => { const ar = dag.slice(0, 4), medAr = forraAr !== null && ar !== forraAr; forraAr = ar; return kortDatum(dag, medAr); };
     st.forEach((s, i) => {
@@ -103,7 +129,7 @@
         vag.append(VL.el('a', { class: 'vag__station vag__station--traff' + kant(p), href: 'traffar.html?id=' + s.t.id, style: pos,
           'aria-label': '📍 ' + s.t.title + ', ' + langtDatum(s.t.day) + (VL.traffar && VL.traffar.klockslag(s.t) ? ' ' + VL.traffar.klockslag(s.t) : '') },
           VL.el('span', { class: 'vag__bild vag__tom', text: '📍' }),
-          VL.el('span', { class: 'vag__text' }, VL.el('small', { text: datum(s.t.day) }), VL.el('span', { text: s.t.title }))));
+          VL.el('span', { class: 'vag__text', style: textStil(i) }, VL.el('small', { text: datum(s.t.day) }), VL.el('span', { text: s.t.title }))));
         return;
       }
       const m = s.m;
@@ -111,7 +137,7 @@
         'aria-label': (m.kind === 'resa' ? '✈ ' : '') + (m.title ? m.title + ', ' : '') + langtDatum(m.start_date) },
         m.thumb ? VL.el('img', { class: 'vag__bild', src: m.thumb, alt: '', loading: 'lazy' }) : VL.el('span', { class: 'vag__bild vag__tom', text: '♥' }),
         m.kind === 'resa' ? VL.el('span', { class: 'vag__resa', text: '✈' }) : null,
-        VL.el('span', { class: 'vag__text' }, VL.el('small', { text: datum(m.start_date) }), m.title ? VL.el('span', { text: m.title }) : null)));
+        VL.el('span', { class: 'vag__text', style: textStil(i) }, VL.el('small', { text: datum(m.start_date) }), m.title ? VL.el('span', { text: m.title }) : null)));
     });
     behallare.append(vag);
   }

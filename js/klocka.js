@@ -28,12 +28,17 @@
   const sidansUrl = (path, search) => { const u = (path || '').split('/').pop() + (search || ''); return /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?)$/.test(u) ? u : null; };
   let knapp = null, timer = null, lyssnar = false;
   async function uppdatera() {
+    // stora hjärtat och den öppna rutan först – en reaktion som lästs i den öppna rutan ska inte räknas med i siffran
+    if (VL.hjarta) await VL.hjarta.uppdatera().catch(() => {});
     if (!knapp || !knapp.isConnected) return;
     let n = 0;
-    try { n = await VL.api.olastaNotiser(); } catch (e) { return; }
+    try {
+      const [a, b] = await Promise.all([VL.api.olastaNotiser(), VL.api.olastaReaktioner ? VL.api.olastaReaktioner().catch(() => 0) : 0]);
+      n = a + b;   // olästa händelser + olästa reaktioner
+    } catch (e) { return; }
     const m = knapp.querySelector('.klocka__antal');
     m.textContent = marke(n); m.hidden = !n;
-    knapp.setAttribute('aria-label', VL.t('klocka.oppna', { n }));
+    knapp.setAttribute('aria-label', VL.t('hjarta.oppna', { n }));
     try { if ('setAppBadge' in navigator) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (e) {}   // siffra på appikonen
   }
   async function oppna() {
@@ -57,10 +62,30 @@
     const bort = e => { if (!meny.contains(e.target) && !knapp.contains(e.target)) { meny.remove(); document.removeEventListener('click', bort, true); } };
     setTimeout(() => document.addEventListener('click', bort, true));
   }
+  // Händelserna (bilder, gilla, kommentarer) ritade i hjärtats ruta – samma lista och samma läst-regler som förut.
+  async function handelser(behallare) {
+    const rita = async () => {
+      let rader = [];
+      try { rader = await VL.api.notiser(20); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); }
+      behallare.replaceChildren(lista(rader, {
+        onLasAlla: async () => { await VL.api.lasAllaNotiser().catch(() => {}); await rita(); uppdatera(); },
+        onOppna: async (r, ev) => {
+          if (r.read_at) return;
+          ev.preventDefault();
+          await VL.api.lasNotis(r.id).catch(() => {});
+          location.href = sakerUrl(r.url);
+        },
+      }));
+    };
+    await rita();
+  }
   async function starta({ sida = sidansUrl(location.pathname, location.search) } = {}) {
     const plats = document.getElementById('klocka'); if (!plats) return;
-    knapp = VL.el('button', { type: 'button', class: 'klocka', 'aria-haspopup': 'menu', 'aria-label': VL.t('klocka.oppna', { n: 0 }), onclick: oppna },
-      VL.el('span', { text: '🔔', 'aria-hidden': 'true' }), VL.el('span', { class: 'klocka__antal', hidden: true }));
+    // klockan är ett hjärta (Jock 2026-09-28): tryck → hjärtats ruta med reaktioner och händelser
+    knapp = VL.el('button', { type: 'button', class: 'klocka', 'aria-haspopup': 'dialog', 'aria-label': VL.t('hjarta.oppna', { n: 0 }),
+      // går hjärtats ruta inte att öppna (vid nätfel hittas ingen att skicka till) visas klockans lista; kastar den syns felet – aldrig tystnad
+      onclick: () => Promise.resolve(VL.hjarta && VL.hjarta.oppna()).then(d => d || oppna()).catch(e => VL.toast(e.message || VL.t('fel.allmant'), 'fel')) },
+      VL.hjarta ? VL.hjarta.ikon('klocka__hjarta') : VL.el('span', { text: '🔔', 'aria-hidden': 'true' }), VL.el('span', { class: 'klocka__antal', hidden: true }));
     plats.replaceChildren(knapp);
     if (sida) await VL.api.lasNotiserMedUrl(sida).catch(() => {});   // man är redan här – notiserna om den här sidan är lästa
     uppdatera();
@@ -73,5 +98,5 @@
     timer = setInterval(() => { if (document.visibilityState === 'visible') uppdatera(); }, 60000);
   }
   const stoppa = () => { clearInterval(timer); timer = null; knapp = null; };
-  VL.klocka = { marke, tidSedan, sidansUrl, lista, starta, stoppa, uppdatera };
+  VL.klocka = { marke, tidSedan, sidansUrl, lista, handelser, starta, stoppa, uppdatera };
 })(window.VL);

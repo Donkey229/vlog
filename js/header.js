@@ -38,11 +38,15 @@
     const sokKnapp = el('button', { type: 'button', class: 'sok-knapp', 'aria-label': VL.t('nav.sok'), 'aria-expanded': 'false', text: '⌕', onclick: () => {
       const oppen = top.classList.toggle('top--sok'); sokKnapp.setAttribute('aria-expanded', String(oppen)); if (oppen) q.focus(); } });
     // Rad 1 till höger: sök, partnern (grön prick när hon/han är inne), 🔔, profil – språk, tema och Admin ligger i profilmenyn
+    // min rundel: profilbilden om jag valt en (📷 i profilmenyn), annars första bokstaven
+    const avKnapp = prof ? el('button', { type: 'button', class: 'av', title: prof.display_name, 'aria-label': prof.display_name, 'aria-haspopup': 'menu', onclick: ev => profilMeny(ev.currentTarget, prof) },
+      el('span', { class: 'av__bokstav', text: initials(prof.display_name) })) : null;
+    if (avKnapp && prof.avatar_path && VL.profilbild) VL.profilbild.fyll(avKnapp, prof.avatar_path);
     const right = el('div', { class: 'top__hoger' }, sokKnapp,
       redaktor ? el('span', { id: 'narvaro', class: 'narvaro' }) : null,
       redaktor ? el('span', { id: 'klocka', class: 'klocka-plats' }) : null,
       redaktor ? el('a', { class: 'knapp knapp--liten top__nytt', href: 'index.html?nytt=1', text: VL.t('nav.nytt') }) : null,   // bara på datorn; mobil: svävande ＋
-      prof ? el('button', { type: 'button', class: 'av', title: prof.display_name, 'aria-label': prof.display_name, 'aria-haspopup': 'menu', text: initials(prof.display_name), onclick: ev => profilMeny(ev.currentTarget, prof) }) : null,
+      prof ? avKnapp : null,
       prof ? null : el('button', { type: 'button', class: 'install-knapp', 'aria-label': VL.t('nav.installningar'), 'aria-haspopup': 'menu', text: '⚙', onclick: ev => installMeny(ev.currentTarget, prof) }),
       prof ? null : el('a', { class: 'knapp knapp--liten', href: 'auth.html', text: VL.t('nav.logga_in') }));
     // ＋ Nytt minne som svävande knapp nere till höger på mobil (i body – rubrikradens backdrop-filter skulle annars låsa den)
@@ -85,17 +89,31 @@
     m = oppnaMeny('installmeny', knapp, installningar(prof, () => m && m.remove()));
   }
 
+  // Logga ut här ('local') eller på alla enheter ('global', t.ex. om en telefon kommit bort). ga = sidbytet (testerna byter ut det).
+  // Alla enheter: ALLA mina notisprenumerationer tas bort – annars visar den borttappade telefonen notiser på låsskärmen.
+  // En enhet där man sedan loggar in igen sparar om sin egen (VL.notis.synka), så att menyns "på" stämmer.
+  // Går det inte loggas man inte ut (felet visas och man kan försöka igen). Platsdelningen stängs alltid av.
+  VL.loggaUt = async (scope, prof, ga = () => { location.href = 'auth.html'; }) => {
+    if (VL.narvaro) { VL.narvaro.satDela(false); if (VL.narvaro.stoppa) VL.narvaro.stoppa(); }   // (halvgammal sida: narvaro.js utan stoppa)
+    if (VL.notis) await VL.notis.stangAv(true).catch(() => {});
+    if (scope === 'global') await VL.api.taBortAllaPrenumerationer(prof.id);
+    try { if ('clearAppBadge' in navigator) navigator.clearAppBadge(); } catch (e) {}
+    await VL.sb.auth.signOut({ scope }); VL.session.clear(); ga();
+  };
+
   // Profilmeny: språk, tema, Admin, platsdelning, notiser, logga ut här eller på alla enheter (t.ex. om en telefon kommit bort).
   function profilMeny(knapp, prof) {
     const gammal = document.getElementById('profilmeny'); if (gammal) { gammal.remove(); return; }
-    const ut = async scope => { if (VL.notis) await VL.notis.stangAv(true).catch(() => {}); try { if ('clearAppBadge' in navigator) navigator.clearAppBadge(); } catch (e) {} await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
-    // Platsdelning är frivillig och av som standard; bara medan appen är öppen, sparas aldrig.
+    const ut = scope => VL.loggaUt(scope, prof).catch(e => VL.toast(e.message || VL.t('fel.allmant'), 'fel'));
+    // Platsdelning är frivillig och av som standard; gäller bara den här inloggningen, bara medan appen är öppen, sparas aldrig i databasen.
     const plats = VL.narvaro && VL.el('button', { type: 'button', role: 'menuitem', text: VL.t(VL.narvaro.delar() ? 'narvaro.dela_av' : 'narvaro.dela_pa'), onclick: () => {
       const pa = !VL.narvaro.delar(); VL.narvaro.satDela(pa); if (pa) VL.toast(VL.t('narvaro.delar_nu')); m.remove(); } });
     const redaktor = !!document.getElementById('narvaro');
     const m = VL.el('div', { id: 'profilmeny', class: 'meny meny--profil', role: 'menu' },
       prof ? VL.el('p', { class: 'meny__namn', text: prof.display_name }) : null,
       ...installningar(prof, () => m.remove()),
+      prof && VL.profilbild ? VL.el('button', { type: 'button', role: 'menuitem', text: '📷 ' + VL.t('profil.bild'), onclick: () => { m.remove();
+        VL.profilbild.valj(prof, { klar: path => { prof.avatar_path = path; VL.profilbild.fyll(knapp, path); } }); } }) : null,
       redaktor && VL.bytTitel ? VL.el('button', { type: 'button', role: 'menuitem', text: '✎ ' + VL.t('red.titel_sida'), onclick: () => { m.remove(); VL.bytTitel(); } }) : null,
       prof && prof.role === 'admin' ? VL.el('a', { role: 'menuitem', class: 'meny__lank', href: 'admin.html', text: '⚙ ' + VL.t('nav.admin') }) : null,
       redaktor ? plats : null,
@@ -104,7 +122,8 @@
       VL.el('button', { type: 'button', role: 'menuitem', text: VL.t('nav.logga_ut'), onclick: () => ut('local') }),
       VL.el('button', { type: 'button', role: 'menuitem', class: 'fara', text: VL.t('nav.logga_ut_alla'), onclick: () => ut('global') }));
     knapp.parentNode.append(m); m.querySelector('button').focus();
-    const bort = e => { if (!m.contains(e.target) && e.target !== knapp) { m.remove(); document.removeEventListener('click', bort, true); } };
+    // contains: trycket landar ofta på rundelns bokstav eller profilbild – då stänger knappen själv menyn (ovan)
+    const bort = e => { if (!m.contains(e.target) && !knapp.contains(e.target)) { m.remove(); document.removeEventListener('click', bort, true); } };
     setTimeout(() => document.addEventListener('click', bort, true));
   }
 

@@ -43,7 +43,16 @@
   };
   VL.toast = function (text, kind = 'ok') {
     const t = VL.el('div', { class: 'toast toast--' + kind, role: 'status', text });
-    document.body.append(t); setTimeout(() => t.remove(), 4000);
+    // En öppen dialogruta ligger i webbläsarens översta lager (inget z-index når dit) – då läggs toasten i den översta rutan,
+    // och flyttar ut igen om rutan stängs innan toasten gått ut.
+    let kvar = true;
+    const placera = () => {
+      if (!kvar) return;
+      const dlg = [...document.querySelectorAll('dialog[open]')].pop();
+      (dlg || document.body).append(t);
+      if (dlg) dlg.addEventListener('close', placera, { once: true });
+    };
+    placera(); setTimeout(() => { kvar = false; t.remove(); }, 4000);
   };
   VL.openDialog = function (title, body, { okText, onOk } = {}) {
     const d = VL.el('dialog', { class: 'dlg' },
@@ -60,16 +69,15 @@
     const { dialog } = VL.openDialog(text, VL.el('p', { text: '' }), { okText: VL.t('minne.ta_bort'), onOk: () => { svar = true; } });
     dialog.addEventListener('close', () => res(svar));
   });
-  VL.safeNext = s => /^(index|minne|admin|traffar)\.html(\?[\w=&%.-]*)?$/.test(s || '') ? s : 'index.html';
+  VL.safeNext = s => /^(index|minne|admin|traffar|om)\.html(\?[\w=&%.-]*)?$/.test(s || '') ? s : 'index.html';   // alla sidor som kör guard
   VL.guard = async function ({ allowAnon = false } = {}) {
     // Länk från ett mejl som hamnat på startsidan (t.ex. inbjudan från Supabase-panelen): skicka vidare till inloggningen.
     if (new URLSearchParams(location.search).has('token_hash')) { location.replace('auth.html' + location.search); return null; }
     const here = location.pathname.split('/').pop() + location.search;
     const { data: { session } } = await VL.sb.auth.getSession();
-    if (session && VL.session.expired(VL.session.lastLogin())) {   // en gång i veckan: logga in igen
-      await VL.session.loggaUtHar(VL.sb);
-      location.replace('auth.html?veckan=1&next=' + encodeURIComponent(here)); return null;
-    }
+    // Inloggningen gäller tills man själv loggar ut (Jock 2026-09-28: ingen veckoutloggning).
+    // Äldre enheter utan sparad inloggningstid får den nu – platsdelningen hör till inloggningen.
+    if (session && !VL.session.lastLogin()) VL.session.markLogin();
     if (!session) { if (allowAnon) return null; location.replace('auth.html?next=' + encodeURIComponent(here)); return null; }
     const prof = await VL.api.me();
     if (!prof) { await VL.session.loggaUtHar(VL.sb); location.replace('auth.html'); return null; }
