@@ -52,7 +52,8 @@
     const prof = await VL.api.me();
     if (!prof) { await VL.sb.auth.signOut(); location.replace('auth.html'); return null; }
     const { data: aal } = await VL.sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    const needsCode = (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') || (prof.role === 'admin' && aal.currentLevel !== 'aal2');
+    // Tvåstegskod krävs inte längre av någon (ägarens beslut); frågas bara om ett konto ändå har en aktiv kod.
+    const needsCode = aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2';
     if (needsCode || !prof.display_name) { location.replace('auth.html?steg=' + (needsCode ? 'kod' : 'profil') + '&next=' + encodeURIComponent(here)); return null; }
     VL.setLang(prof.lang); return prof;
   };
