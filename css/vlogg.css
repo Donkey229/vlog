@@ -195,7 +195,8 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .chips .pa { background: var(--rose); color: #fff; }
 .forfattare { display: inline-flex; align-items: center; gap: 6px; }
 .forfattare img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
-.kort small.av { display: block; color: var(--muted); font-weight: 400; margin-top: 4px; letter-spacing: 0; }
+/* bylinen återanvänder klassen .av – nollställ avatarens storlek, rund form och rosa bakgrund */
+.kort small.av { display: block; width: auto; height: auto; border-radius: 0; background: none; color: var(--muted); font-weight: 400; margin-top: 4px; letter-spacing: 0; }
 
 /* ljud */
 .ljudlista { display: grid; gap: 10px; margin-top: 18px; }
