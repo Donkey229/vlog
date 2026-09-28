@@ -2,6 +2,7 @@
 // Android/Samsung: knappen "Installera app"). Rutan kan stängas och visas då inte igen.
 (function (VL) {
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  if (VL.version) VL.version.bevaka();   // ladda om med ny kod när appen tas fram efter en publicering
   const KEY = 'vl-app-tips-stangd';
   const stangd = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return true; } };
   const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;

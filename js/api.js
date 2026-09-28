@@ -139,13 +139,21 @@
       throw e;
     }
   }
-  // Tar bort filerna i lagringen först (rättigheten följer bildraden), sedan raderna – en eller många på en gång.
+  // Tar bort filerna i lagringen först (rättigheten följer bildraden), sedan raderna – i omgångar om 50, så att
+  // URL:en (id-listan) och lagringens gräns (1000 sökvägar) aldrig överskrids och ett fel bara lämnar en liten rest.
+  // Svarar med antalet borttagna; vid fel får felet .borttagna så att användaren ser hur långt det kom.
   async function removeMediaMany(rows) {
-    if (!rows.length) return;
-    const paths = rows.flatMap(r => [r.path, r.thumb_path, r.poster_path]).filter(Boolean);
-    must(await sb.storage.from('media').remove(paths));
-    must(await sb.from('media').delete().in('id', rows.map(r => r.id)));
-    await clearCouplePathIf(paths);
+    let borttagna = 0; const klara = [];
+    try {
+      for (const omg of VL.urval.omgangar(rows, 50)) {
+        const paths = omg.flatMap(r => [r.path, r.thumb_path, r.poster_path]).filter(Boolean);
+        must(await sb.storage.from('media').remove(paths));
+        must(await sb.from('media').delete().in('id', omg.map(r => r.id)));
+        klara.push(...paths); borttagna += omg.length;
+      }
+    } catch (e) { e.borttagna = borttagna; throw e; }
+    finally { if (klara.length) await clearCouplePathIf(klara).catch(() => {}); }
+    return borttagna;
   }
   const removeMedia = row => removeMediaMany([row]);
   const setCover = async (memoryId, mediaId) => updateMemory(memoryId, { cover_media_id: mediaId });
@@ -190,6 +198,17 @@
   async function updateProfile(patch) { const { data: { user } } = await sb.auth.getUser(); must(await sb.from('profiles').update(patch).eq('id', user.id)); }
   async function uploadAvatar(blob) { const { data: { user } } = await sb.auth.getUser(); const name = `avatars/${user.id}.jpg`; must(await sb.storage.from('media').upload(name, blob, { contentType: 'image/jpeg', upsert: true })); await updateProfile({ avatar_path: name }); return name; }
   async function storageUsedMB() { const rows = must(await sb.from('media').select('bytes')); return Math.round(rows.reduce((s, r) => s + Number(r.bytes || 0), 0) / 1048576); }
+  // för aktivitetsloggen: bildrader (miniatyr, typ, minne) och minnenas namn, per id
+  async function mediaById(ids) {
+    const map = {}; if (!ids.length) return map;
+    must(await sb.from('media').select('id,kind,thumb_path,memory_id').in('id', ids)).forEach(r => { map[r.id] = r; });
+    return map;
+  }
+  async function minnesTitlar(ids) {
+    const map = {}; if (!ids.length) return map;
+    must(await sb.from('memories').select('id,title,start_date,end_date').in('id', ids)).forEach(r => { map[r.id] = r.title || VL.dates.formatRange(r.start_date, r.end_date); });
+    return map;
+  }
   const activity = async (n = 50) => must(await sb.from('activity').select('*').order('at', { ascending: false }).limit(n));
   async function admin(action, payload = {}) {
     const { data, error } = await sb.functions.invoke('admin-users', { body: { action, site: VL.config.site, ...payload } });
@@ -199,9 +218,9 @@
   // push-notiser: spara/ta bort den här enheten, och be servern skicka en notis till de andra
   const sparaPrenumeration = async (sub, enhet) => must(await sb.rpc('spara_prenumeration', { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_enhet: enhet || '' }));
   const taBortPrenumeration = async endpoint => must(await sb.from('push_subscriptions').delete().eq('endpoint', endpoint));
-  const notis = async (text, url) => { const { error } = await sb.functions.invoke('notis', { body: { text, url } }); if (error) throw error; };
+  const notis = async (text, url, test = false, endpoint = null) => { const { data, error } = await sb.functions.invoke('notis', { body: { text, url, test, endpoint } }); if (error) throw error; return data; };
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
     createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
-    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
+    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
 })(window.VL);

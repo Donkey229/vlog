@@ -51,6 +51,7 @@
     const m = VL.el('div', { id: 'profilmeny', class: 'meny meny--profil', role: 'menu' },
       document.getElementById('narvaro') ? plats : null,
       document.getElementById('narvaro') && VL.notis ? VL.notis.knapp(() => m.remove()) : null,
+      document.getElementById('narvaro') && VL.notis ? VL.notis.testKnapp(() => m.remove()) : null,
       VL.el('button', { type: 'button', role: 'menuitem', text: VL.t('nav.logga_ut'), onclick: () => ut('local') }),
       VL.el('button', { type: 'button', role: 'menuitem', class: 'fara', text: VL.t('nav.logga_ut_alla'), onclick: () => ut('global') }));
     knapp.parentNode.append(m); m.querySelector('button').focus();

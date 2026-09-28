@@ -17,6 +17,8 @@
   const marke = m => (m.kind === 'video' ? '▶' + (m.duration_s ? ' ' + Math.round(m.duration_s) + ' s' : '') : m.kind === 'audio' ? '♪' : '');
   const filtrera = (lista, flik) => (flik === 'bilder' || flik === 'filmer' ? lista.filter(m => typ(m) === flik) : lista);
   const valj = (lista, vad) => new Set(filtrera(lista, vad).map(m => m.id));
+  // Dela en lista i omgångar om n (stora borttagningar: id:n hamnar i URL:en, och lagringen tar max 1000 sökvägar per anrop).
+  const omgangar = (lista, n) => { const ut = []; for (let i = 0; i < lista.length; i += n) ut.push(lista.slice(i, i + n)); return ut; };
 
   // Flikar över galleriet – bara när det finns både bilder och filmer att skilja på.
   function galleriFlikar(lista, aktiv, onVal) {
@@ -26,5 +28,5 @@
       text: VL.t('galleri.' + k, { n }), onclick: () => onVal(k) });
     return VL.el('nav', { class: 'galleri-flikar', 'aria-label': VL.t('galleri.visa') }, flik('alla', r.bilder + r.filmer), flik('bilder', r.bilder), flik('filmer', r.filmer));
   }
-  VL.urval = { rakna, beskriv, sammanfattning, marke, filtrera, valj, galleriFlikar };
+  VL.urval = { rakna, beskriv, sammanfattning, marke, filtrera, valj, omgangar, galleriFlikar };
 })(window.VL);
