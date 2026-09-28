@@ -12,8 +12,12 @@
       else if (k in e && typeof v !== 'string') e[k] = v;
       else e.setAttribute(k, v === true ? '' : v);
     }
-    for (const kid of kids.flat()) { if (kid == null || kid === false) continue; e.append(kid instanceof Node ? kid : document.createTextNode(String(kid))); }
-    return e;
+    return VL.add(e, ...kids);
+  };
+  // Som append, men null/false hoppas över (inbyggda append skriver ut dem som texten "null").
+  VL.add = function (parent, ...kids) {
+    for (const kid of kids.flat()) { if (kid == null || kid === false) continue; parent.append(kid instanceof Node ? kid : document.createTextNode(String(kid))); }
+    return parent;
   };
   VL.toast = function (text, kind = 'ok') {
     const t = VL.el('div', { class: 'toast toast--' + kind, role: 'status', text });

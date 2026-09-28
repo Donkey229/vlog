@@ -32,7 +32,7 @@
       const inp = el('input', { value: s.title, maxlength: 60 });
       VL.openDialog(VL.t('red.titel_sida'), el('div', { class: 'falt' }, inp), { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateSettings({ title: inp.value.trim() || 'Emma & Jock' }); location.reload(); } });
     } }) : null;
-    top.append(par, titelKnapp, el('nav', { class: 'flikar', 'aria-label': VL.t('nav.meny') },
+    VL.add(top, par, titelKnapp, el('nav', { class: 'flikar', 'aria-label': VL.t('nav.meny') },
       tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('om', 'nav.om', 'om.html')), right);
     VL.renderFooter(s);
     return s;
