@@ -66,14 +66,14 @@
   } else if (vy === 'tidslinje') {
     const kat = kategorier.some(k => k.slug === q.get('kat')) ? q.get('kat') : null;
     const rader = await VL.api.recent(antal, kat);
-    main.append(el('h1', { class: 'stor', text: VL.t('nav.tidslinje') }),
+    VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.tidslinje') }),
       el('div', { class: 'chips', style: { marginTop: '14px' } },
         el('a', { class: kat ? '' : 'pa', href: 'index.html?vy=tidslinje', text: VL.t('kat.alla') }),
         kategorier.map(k => el('a', { class: kat === k.slug ? 'pa' : '', href: 'index.html?vy=tidslinje&kat=' + k.slug, text: VL.api.catName(k) }))),
       rader.length ? kortLista(rader) : tomt(), visaFler(rader));
   } else {
     const resor = await VL.api.recent(antal, null, true);
-    main.append(el('h1', { class: 'stor', text: VL.t('nav.resor') }), resor.length ? kortLista(resor) : tomt(), visaFler(resor));
+    VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.resor') }), resor.length ? kortLista(resor) : tomt(), visaFler(resor));
   }
   if (q.get('nytt') === '1' && VL.redigera && prof && ['admin', 'editor'].includes(prof.role)) VL.redigera.nyttMinne();
 })(window.VL);
