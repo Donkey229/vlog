@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="sv"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://lxownohxkswzhvwlaznt.supabase.co; connect-src 'self' https://lxownohxkswzhvwlaznt.supabase.co wss://lxownohxkswzhvwlaznt.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex">
+<title>Emma &amp; Jock</title><link rel="stylesheet" href="css/vlogg.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/app-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Emma &amp; Jock"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="js/theme.js"></script>
+<script src="js/session.js"></script>
+</head><body>
+<div class="tona"></div>
+<main class="ruta" id="ruta">
+  <h1 data-i18n="auth.valkommen">Välkommen</h1>
+  <section id="s-login">
+    <form id="f-login">
+      <div class="falt"><label data-i18n="auth.epost" for="l-epost"></label><input id="l-epost" type="email" autocomplete="username" required></div>
+      <div class="falt"><label data-i18n="auth.losenord" for="l-losen"></label><input id="l-losen" type="password" autocomplete="current-password" required></div>
+      <button class="knapp" data-i18n="auth.logga_in"></button>
+      <button type="button" class="lank" id="till-glomt" data-i18n="auth.glomt"></button>
+    </form>
+  </section>
+  <section id="s-glomt" hidden>
+    <form id="f-glomt">
+      <div class="falt"><label data-i18n="auth.epost" for="g-epost"></label><input id="g-epost" type="email" required></div>
+      <button class="knapp" data-i18n="auth.skicka_aterst"></button>
+      <button type="button" class="lank" data-tillbaka data-i18n="auth.tillbaka"></button>
+    </form>
+  </section>
+  <section id="s-fortsatt" hidden><p data-i18n="auth.fortsatt_text"></p><p><button class="knapp" id="b-fortsatt" data-i18n="auth.fortsatt"></button></p></section>
+  <section id="s-losen" hidden>
+    <form id="f-losen">
+      <div class="falt"><label data-i18n="auth.valj_losen" for="n-losen"></label><input id="n-losen" type="password" autocomplete="new-password" minlength="10" required><small class="dampad" data-i18n="auth.losen_krav"></small></div>
+      <div class="falt"><label data-i18n="auth.losen_igen" for="n-losen2"></label><input id="n-losen2" type="password" autocomplete="new-password" minlength="10" required></div>
+      <button class="knapp" data-i18n="auth.spara"></button>
+    </form>
+  </section>
+  <section id="s-profil" hidden>
+    <form id="f-profil">
+      <div class="falt"><label data-i18n="auth.namn" for="p-namn"></label><input id="p-namn" maxlength="40" required></div>
+      <div class="falt"><label data-i18n="auth.profilbild" for="p-bild"></label><input id="p-bild" type="file" accept="image/*"></div>
+      <div class="falt"><label data-i18n="auth.sprak" for="p-sprak"></label><select id="p-sprak"><option value="sv">Svenska</option><option value="en">English</option><option value="th">ไทย</option></select></div>
+      <button class="knapp" data-i18n="auth.spara"></button>
+    </form>
+  </section>
+  <section id="s-kod" hidden>
+    <h2 data-i18n="auth.tvasteg"></h2>
+    <p id="kod-info" data-i18n="auth.tvasteg_skanna" hidden></p>
+    <img id="kod-qr" class="qr" alt="QR" hidden>
+    <p id="kod-hemlig" class="dampad" hidden></p>
+    <form id="f-kod"><div class="falt"><label data-i18n="auth.kod" for="k-kod"></label><input id="k-kod" inputmode="numeric" autocomplete="one-time-code" pattern="\d{6}" maxlength="6" required></div><button class="knapp" data-i18n="auth.verifiera"></button></form>
+  </section>
+</main>
+<script src="js/ns.js"></script><script src="js/config.js"></script><script src="js/i18n.js"></script>
+<script src="js/vendor/supabase.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script>
+<script src="js/media.js"></script><script src="js/vendor/exifr-lite.js"></script><script src="js/dates.js"></script>
+<script src="js/pages/auth.js"></script>
+<script src="js/pwa.js"></script>
+</body></html>
