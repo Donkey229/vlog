@@ -13,7 +13,7 @@
     const { data: aal } = await VL.sb.auth.mfa.getAuthenticatorAssuranceLevel();
     const { data: f } = await VL.sb.auth.mfa.listFactors();
     const totp = (f && f.totp || []).find(x => x.status === 'verified');
-    if (aal.currentLevel !== 'aal2' && (totp || prof.role === 'admin')) return visaKod(totp);
+    if (totp && aal.currentLevel !== 'aal2') return visaKod(totp);   // bara konton som själva har en aktiv tvåstegskod
     if (!prof.display_name) { document.getElementById('p-sprak').value = prof.lang; return show('s-profil'); }
     location.replace(next);
   }
