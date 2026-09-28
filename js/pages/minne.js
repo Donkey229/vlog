@@ -44,26 +44,7 @@
     return h;
   }
 
-  function ljusbord(lista, start) {
-    let i = start;
-    const box = el('div', { class: 'ljus', role: 'dialog', 'aria-modal': 'true', tabindex: '-1' });
-    const visa = () => {
-      const m = lista[i], u = VL.minneSida.urls;
-      box.querySelector('img,video')?.remove();
-      box.prepend(m.kind === 'video' ? el('video', { src: u[m.path], poster: u[m.poster_path], controls: true, autoplay: true, playsInline: true }) : el('img', { src: u[m.path], alt: m.caption || '' }));
-    };
-    const stang = () => { box.remove(); document.removeEventListener('keydown', tangent); };
-    const steg = d => { i = (i + d + lista.length) % lista.length; visa(); };
-    const tangent = e => { if (e.key === 'Escape') stang(); if (e.key === 'ArrowRight') steg(1); if (e.key === 'ArrowLeft') steg(-1); };
-    let x0 = null;
-    box.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
-    box.addEventListener('touchend', e => { if (x0 != null) { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) steg(dx < 0 ? 1 : -1); } x0 = null; });
-    box.append(el('button', { class: 'stang', 'aria-label': VL.t('minne.stang'), text: '×', onclick: stang }),
-      lista.length > 1 ? el('button', { class: 'fore', 'aria-label': '‹', text: '‹', onclick: () => steg(-1) }) : null,
-      lista.length > 1 ? el('button', { class: 'efter', 'aria-label': '›', text: '›', onclick: () => steg(1) }) : null);
-    document.addEventListener('keydown', tangent);
-    document.body.append(box); visa(); box.focus();
-  }
+  const ljusbord = (lista, start) => VL.ljusbord(lista, start, () => VL.minneSida.urls);
 
   const galleri = (lista, urls) => el('div', { class: 'galleri' }, lista.map((m, i) => el('button', { type: 'button', onclick: () => ljusbord(lista, i), 'aria-label': m.kind },
     el('img', { src: urls[m.thumb_path], alt: m.caption || '', loading: 'lazy' }), m.kind === 'video' ? el('span', { class: 'spela', text: '▶ ' + (m.duration_s ? Math.round(m.duration_s) + ' s' : '') }) : null)));

@@ -8,7 +8,7 @@
 
   async function efterInloggning() {
     const prof = await VL.api.me();
-    if (!prof) { await VL.sb.auth.signOut(); show('s-login'); return; }
+    if (!prof) { await VL.session.loggaUtHar(VL.sb); show('s-login'); return; }
     VL.setLang(prof.lang);
     const { data: aal } = await VL.sb.auth.mfa.getAuthenticatorAssuranceLevel();
     const { data: f } = await VL.sb.auth.mfa.listFactors();
@@ -100,5 +100,5 @@
   if (q.get('veckan') === '1') VL.toast(VL.t('auth.veckan'));
   const { data: { session } } = await VL.sb.auth.getSession();
   if (session && !VL.session.expired(VL.session.lastLogin())) efterInloggning();
-  else { if (session) { await VL.sb.auth.signOut(); VL.session.clear(); } show('s-login'); }
+  else { if (session) { await VL.session.loggaUtHar(VL.sb); } show('s-login'); }
 })(window.VL);
