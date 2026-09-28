@@ -66,8 +66,9 @@
         }
         let klara = 0;
         for (const k of Object.keys(perDag).sort()) {
-          const mem = await VL.api.createMemory({ kind: 'dag', start_date: k, end_date: null, title: '', story: '', visibility: 'private' });
-          mem.media = [];
+          // finns dagen redan (t.ex. vid en andra import) läggs filerna där i stället för i en dubblett
+          const mem = VL.dates.valjImportMinne(await VL.api.importKandidater(k), k)
+            || { ...(await VL.api.createMemory({ kind: 'dag', start_date: k, end_date: null, title: '', story: '', visibility: 'private' })), media: [] };
           await VL.redigera.laddaUpp(mem, perDag[k], (i, n) => { bar.style.width = Math.round(100 * (klara + i) / lista.length) + '%'; text.textContent = VL.t('admin.importerar', { i: klara + i + 1, n: lista.length }); });
           klara += perDag[k].length;
         }
