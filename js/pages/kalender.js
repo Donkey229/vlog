@@ -18,12 +18,19 @@
       el('h3', { text: r.title || '—' }),
       r.place ? el('small', { class: 'plats', text: '📍 ' + r.place }) : null,
       personer[VL.text.skribent(r)] ? el('small', { class: 'av', text: VL.t('minne.skrivet_av', { namn: personer[VL.text.skribent(r)].display_name }) }) : null))));
-  const tomt = () => el('p', { class: 'tomlage', text: VL.t('kal.tom') });
+  const tomt = (nyckel = 'kal.tom_alla') => el('p', { class: 'tomlage', text: VL.t(nyckel) });   // "den här månaden" bara under kalendern
   const antal = Math.min(600, Math.max(60, parseInt(q.get('antal'), 10) || 60));
   const visaFler = rader => rader.length >= antal && antal < 600 ? el('p', { style: { textAlign: 'center', marginTop: '18px' } }, el('a', { class: 'knapp knapp--sekundar', href: (() => { const u = new URLSearchParams(location.search); u.set('antal', antal + 60); return 'index.html?' + u; })(), text: VL.t('kal.visa_fler') })) : null;
 
   const senaste = await VL.api.recent(24);
   VL.renderMosaic(senaste.map(r => r.thumb).filter(Boolean));
+
+  // Stora vita hjärtat överst (Jock och Emma): den andras senaste reaktion; tryck → svara. #hjarta (från notisen) öppnar rutan.
+  if (vy === 'kalender' && VL.hjarta) {
+    const hjarta = await VL.hjarta.stort({ prof, personer }).catch(e => { console.warn('[hjärta]', e); return null; });
+    if (hjarta) main.append(hjarta);
+  }
+  if (VL.hjarta && VL.text.kanRedigera(prof) && VL.hjarta.franAdress(location.hash)) VL.hjarta.oppnaFranAdress();
 
   if (vy === 'kalender') {
     const idag = new Date();
@@ -46,7 +53,7 @@
       el('strong', { text: '📍 ' + nasta.title }),
       el('span', { text: VL.traffar.datumText(nasta) + (VL.traffar.plats(nasta) ? ' · ' + VL.traffar.plats(nasta) : '') })));
     main.append(el('div', { class: 'kalhuvud' },
-      el('div', {}, el('h1', { class: 'stor', text: manad.charAt(0).toUpperCase() + manad.slice(1) }), el('p', { class: 'dampad', text: VL.t('kal.antal', { n: iManaden }) + ' · ' + VL.t(kanSkapa ? 'kal.tips_ny' : 'kal.tips') })),
+      el('div', {}, el('h1', { class: 'stor', text: manad.charAt(0).toUpperCase() + manad.slice(1) }), el('p', { class: 'dampad', text: VL.tn('kal.antal', iManaden) + ' · ' + VL.t(kanSkapa ? 'kal.tips_ny' : 'kal.tips') })),
       el('div', { class: 'kalnav' }, el('button', { text: '‹', 'aria-label': '‹', onclick: () => ga(-1) }), el('button', { text: VL.t('kal.idag'), onclick: () => { location.search = '?vy=kalender'; } }), el('button', { text: '›', 'aria-label': '›', onclick: () => ga(1) }))));
     const dow = Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(VL.locale(), { weekday: 'short' }).format(new Date(2026, 5, 29 + i)));
     const kal = el('div', { class: 'kal' }, el('div', { class: 'kal__dagar' }, dow.map(d => el('div', { class: 'kal__dow', text: d.toUpperCase() }))));
@@ -55,9 +62,9 @@
       const rad = el('div', { class: 'kal__vecka' }, vecka.map(c => {
         const cls = 'dag' + (c.inMonth ? '' : ' dag--ute') + (c.isToday ? ' dag--idag' : '') + (c.thumb ? ' dag--har' : '');
         const inner = [el('span', { class: 'dag__n', text: c.day }), c.thumb ? el('img', { src: c.thumb, alt: '', loading: 'lazy' }) : null,
-          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? el('span', { class: 'dag__traff', text: '📍', title: traffPaDag[c.key].title }) : null];
+          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? VL.traffar.moln(traffPaDag[c.key]) : null];
         const mal = VL.calendar.dagMal(c, kanSkapa, !!traffPaDag[c.key]);
-        return mal === 'minne' ? el('a', { class: cls, href: oppna(c.memoryIds[0]), 'aria-label': c.key }, inner)
+        return mal === 'minne' ? el('a', { class: cls, href: oppna(c.memoryId), 'aria-label': c.key }, inner)
           : mal === 'traff' ? el('a', { class: cls, href: 'traffar.html?id=' + traffPaDag[c.key].id, 'aria-label': '📍 ' + traffPaDag[c.key].title }, inner)
           : mal === 'ny' ? el('button', { type: 'button', class: cls + ' dag--ny', 'aria-label': VL.t('kal.ny_dag', { dag: new Intl.DateTimeFormat(VL.locale(), { dateStyle: 'long' }).format(D.parseDay(c.key)) }), onclick: () => VL.redigera.nyttMinne(c.key) }, inner)
           : el('div', { class: cls }, inner);
@@ -75,7 +82,7 @@
       kal.append(rad);
     });
     main.append(kal);
-    if (!iManaden) main.append(tomt());
+    if (!iManaden) main.append(tomt('kal.tom'));
     main.append(el('h2', { class: 'dagrubrik', text: VL.t('kal.senaste') }), senaste.length ? kortLista(senaste.slice(0, 6)) : tomt());
     const populara = await VL.api.popular(3);
     if (populara.length) main.append(el('h2', { class: 'dagrubrik', text: VL.t('kal.populara') }), kortLista(populara));
@@ -109,11 +116,16 @@
     const lista = VL.platser.lista(await VL.api.platsRader());
     VL.add(main, el('h1', { class: 'stor', text: VL.t('platser.rubrik') }),
       lista.length ? el('div', { class: 'platslista' }, lista.map(p => el('a', { href: 'index.html?vy=tidslinje&plats=' + encodeURIComponent(p.plats) },
-        el('strong', { text: '📍 ' + p.plats }), el('small', { text: VL.t('platser.minnen', { n: p.antal }) }))))
+        el('strong', { text: '📍 ' + p.plats }), el('small', { text: VL.tn('platser.minnen', p.antal) }))))
         : el('p', { class: 'tomlage', text: VL.t('platser.tom') }));
   } else {
     const resor = await VL.api.recent(antal, null, true);
     VL.add(main, el('h1', { class: 'stor', text: VL.t('nav.resor') }), resor.length ? kortLista(resor) : tomt(), visaFler(resor));
   }
-  if (q.get('nytt') === '1' && VL.redigera && prof && ['admin', 'editor'].includes(prof.role)) VL.redigera.nyttMinne(q.get('dag'));
+  if (q.get('nytt') === '1') {
+    // bort ur adressen först, annars öppnas rutan igen vid Tillbaka, omladdning eller språkbyte
+    const u = new URLSearchParams(location.search); u.delete('nytt'); u.delete('dag');
+    history.replaceState(null, '', 'index.html' + (String(u) ? '?' + u : ''));
+    if (VL.redigera && prof && ['admin', 'editor'].includes(prof.role)) VL.redigera.nyttMinne(q.get('dag'));
+  }
 })(window.VL);

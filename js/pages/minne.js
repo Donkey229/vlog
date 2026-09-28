@@ -10,16 +10,55 @@
   let valdDag = null;
   let mediaFlik = 'alla';   // Alla · Bilder · Filmer över galleriet
   const visuell = m => m.kind !== 'audio';
+  // Adresserna till de privata filerna gäller en timme. Står sidan öppen längre förnyas de i stället (se fornya).
+  const GILTIG_S = 3600, FORNYA_EFTER_MS = 50 * 60000;
+  const sokvagar = data => data.media.flatMap(m => [m.path, m.thumb_path, m.poster_path]);
+  let signerad = 0;
 
   async function ladda() {
     const data = /^[0-9a-f-]{36}$/i.test(id) ? await VL.api.memory(id) : null;
     if (!data) { main.replaceChildren(el('p', { class: 'tomlage', text: VL.t('minne.saknas') })); return null; }
-    const paths = data.media.flatMap(m => [m.path, m.thumb_path, m.poster_path]);
-    const [urls, huvuden, personer, kategorier, relaterade] = await Promise.all([VL.api.signedUrls(paths, 3600), VL.api.headers(), VL.api.profiles(), VL.api.categories(), VL.api.related(data, 3)]);
+    const tid = Date.now();
+    const [urls, huvuden, personer, kategorier, relaterade] = await Promise.all([VL.api.signedUrls(sokvagar(data), GILTIG_S), VL.api.headers(), VL.api.profiles(), VL.api.categories(), VL.api.related(data, 3)]);
     const kanRedigera = VL.text.kanRedigera(prof);   // alla minnen (sql/12); ta bort styrs separat
     VL.minneSida = { data, urls, prof, huvuden, personer, kategorier, relaterade, kanRedigera, rita, ladda };
+    signerad = tid;
     return data;
   }
+
+  // Nya adresser när sidan syns igen efter en längre stund, eller när en bild, film eller ett ljud inte laddas (ett försök
+  // per element). Adresserna byts på plats – även i bildvisaren – så en halvskriven kommentar, bildspelets läge och var en
+  // film eller ett ljud står blir kvar.
+  let fornyar = null;
+  const forsokt = new WeakSet();
+  // Ny src på en film eller ett ljud laddar om från 0:00 (och en film med autoplay startar igen). Har den börjat följer
+  // läget och paus/spelar med; preload=none (ljudlistan) blir metadata så att läget går att sätta direkt.
+  function bytAdress(e, a, adress) {
+    const igang = a === 'src' && (e.tagName === 'VIDEO' || e.tagName === 'AUDIO') && (e.currentTime > 0 || !e.paused);
+    const tid = igang ? e.currentTime : 0, spelar = igang && !e.paused;
+    if (igang && e.preload === 'none') e.preload = 'metadata';
+    e.setAttribute(a, adress);
+    if (!igang) return;
+    if (tid) e.addEventListener('loadedmetadata', () => { e.currentTime = tid; }, { once: true });
+    if (spelar) e.play().catch(() => {}); else e.pause();
+  }
+  function fornya() {
+    if (!fornyar) fornyar = (async () => {
+      const tid = Date.now(), gamla = VL.minneSida.urls;
+      const nya = await VL.api.signedUrls(sokvagar(VL.minneSida.data), GILTIG_S);
+      if (VL.minneSida.urls !== gamla) return;   // sidan laddades om under tiden
+      const sokvag = {}; Object.keys(gamla).forEach(p => { sokvag[gamla[p]] = p; });
+      VL.minneSida.urls = nya; signerad = tid;
+      document.querySelectorAll('img, video, audio').forEach(e => ['src', 'poster'].forEach(a => { const p = sokvag[e.getAttribute(a)]; if (p && nya[p]) bytAdress(e, a, nya[p]); }));
+    })().catch(() => {}).finally(() => { fornyar = null; });
+    return fornyar;
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && VL.minneSida && Date.now() - signerad > FORNYA_EFTER_MS) fornya(); });
+  document.addEventListener('error', ev => {   // laddningsfel bubblar inte upp, men fångas på vägen ner
+    const e = ev.target, urls = VL.minneSida && VL.minneSida.urls;
+    if (!urls || !['IMG', 'VIDEO', 'AUDIO'].includes(e.tagName) || forsokt.has(e) || !Object.values(urls).includes(e.getAttribute('src'))) return;
+    forsokt.add(e); fornya();
+  }, true);
 
   function hjalte() {
     const { data, urls, personer, kanRedigera } = VL.minneSida;
@@ -40,7 +79,7 @@
         el('p', {}, [D.formatRange(data.start_date, data.end_date),
           forf ? VL.t('minne.skrivet_av', { namn: forf.display_name }) : null,
           data.story ? VL.t('minne.lastid', { n: VL.text.readingMinutes(data.story) }) : null,
-          nFoto ? VL.t('minne.bilder', { n: nFoto }) : null, nFilm ? VL.t('minne.filmer', { n: nFilm }) : null].filter(Boolean).join(' · '),
+          nFoto ? VL.tn('minne.bilder', nFoto) : null, nFilm ? VL.tn('minne.filmer', nFilm) : null].filter(Boolean).join(' · '),
           el('span', { class: 'chip', text: VL.t('syn.' + data.visibility) }))));
     if (kanRedigera) h.append(el('button', { class: 'prickar', type: 'button', 'aria-haspopup': 'menu', 'aria-label': VL.t('nav.meny'), text: '⋯', onclick: ev => VL.redigera && VL.redigera.oppnaMeny(ev.currentTarget) }));
     return h;
@@ -57,8 +96,8 @@
     const gillat = jag && data.likes.some(l => l.user_id === jag);
     const omLadda = async () => { await ladda(); rita(); };
     kropp.append(el('div', { class: 'socialt' },
-      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }), onclick: async ev => { ev.currentTarget.disabled = true; try { await VL.api.toggleLike(data.id, !gillat); if (!gillat && VL.notis) await VL.notis.skicka('gilla', data); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
-           : el('span', { text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }) }),
+      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.tn('minne.gillar', data.likes.length), onclick: async ev => { ev.currentTarget.disabled = true; try { await VL.api.toggleLike(data.id, !gillat); if (!gillat && VL.notis) await VL.notis.skicka('gilla', data); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
+           : el('span', { text: '♥ ' + VL.tn('minne.gillar', data.likes.length) }),
       el('span', { text: '💬 ' + data.comments.filter(c => c.status === 'approved').length })));
     data.comments.forEach(c => {
       const vantar = c.status === 'pending';
@@ -74,18 +113,22 @@
     const namn = el('input', { class: 'namn', maxlength: 40, required: !prof, placeholder: VL.t('minne.namn'), 'aria-label': VL.t('minne.namn'), value: prof ? prof.display_name : '' });
     const text = el('input', { maxlength: 1000, required: true, placeholder: VL.t('minne.skriv_kommentar'), 'aria-label': VL.t('minne.skriv_kommentar') });
     const honung = el('input', { class: 'honung', name: 'webbplats', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true' });
+    const skicka = el('button', { class: 'knapp', text: VL.t('minne.skicka') });
     kropp.append(el('form', { class: 'kommentarform', onsubmit: async ev => {
       ev.preventDefault();
+      if (skicka.disabled) return;   // redan på väg: två tryck (eller Enter två gånger) ska inte ge två kommentarer
       const t = text.value.trim(), n = namn.value.trim();
       if (!t || !n) return;
       if (honung.value) { text.value = ''; VL.toast(VL.t('minne.kommentar_skickad')); return; }
+      skicka.disabled = true;
       try {
         await VL.api.addComment(data.id, t, n, kanRedigera);
         text.value = '';
         if (kanRedigera && VL.notis) await VL.notis.skicka('kommentar', data);
         if (kanRedigera) await omLadda(); else VL.toast(VL.t('minne.kommentar_skickad'));
       } catch (e) { VL.toast(/för många|too many/i.test(e.message) ? VL.t('fel.spam') : (e.message || VL.t('fel.allmant')), 'fel'); }
-    } }, prof ? null : namn, text, honung, el('button', { class: 'knapp', text: VL.t('minne.skicka') })));
+      finally { skicka.disabled = false; }
+    } }, prof ? null : namn, text, honung, skicka));
   }
 
   function rita() {
@@ -133,7 +176,7 @@
       const lista = VL.urval ? VL.urval.filtrera(dagens, mediaFlik) : dagens;
       if (!lista.length) return;
       const forstaTid = lista.find(m => m.taken_at)?.taken_at;
-      kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(k)) + (forstaTid ? ' · ' + new Intl.DateTimeFormat(VL.locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(forstaTid)) : '') }), VL.urval ? VL.urval.sammanfattning(lista) : VL.t('minne.bilder', { n: lista.length })),
+      kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(k)) + (forstaTid ? ' · ' + new Intl.DateTimeFormat(VL.locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(forstaTid)) : '') }), VL.urval ? VL.urval.sammanfattning(lista) : VL.tn('minne.bilder', lista.length)),
         galleri(lista, urls));
     });
     // YouTube / Instagram / TikTok

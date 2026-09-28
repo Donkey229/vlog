@@ -97,8 +97,7 @@
     };
     return;
   }
-  if (q.get('veckan') === '1') VL.toast(VL.t('auth.veckan'));
   const { data: { session } } = await VL.sb.auth.getSession();
-  if (session && !VL.session.expired(VL.session.lastLogin())) efterInloggning();
-  else { if (session) { await VL.session.loggaUtHar(VL.sb); } show('s-login'); }
+  if (session) efterInloggning();   // redan inloggad – inloggningen gäller tills man loggar ut
+  else show('s-login');
 })(window.VL);

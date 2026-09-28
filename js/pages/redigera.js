@@ -4,21 +4,31 @@
   const ladda = async () => { await VL.minneSida.ladda(); VL.minneSida.rita(); };
   const falt = (key, input) => el('div', { class: 'falt' }, el('label', { text: VL.t(key) }), input);
 
-  // onKlar(antal) anropas efter varje färdig fil – används för att återuppta efter ett fel.
-  async function laddaUpp(memory, files, onProgress, onKlar) {
+  // En fil känns igen på namn, storlek och tid – också när man väljer om den i filväljaren.
+  const filNyckel = f => f.name + '|' + f.size + '|' + f.lastModified;
+  // klara: filer (filNyckel) som redan är uppladdade eller överhoppade – ett nytt försök fortsätter där det stannade.
+  // En fil som inte går att använda (t.ex. GIF eller för lång film) hoppas över så att resten kommer upp; beskedet kastas sist,
+  // med filerna i felets .hoppade (importen samlar dem och fortsätter med nästa dag).
+  async function laddaUpp(memory, files, onProgress, klara = new Set()) {
     const range = D.rangeDays(memory.start_date, memory.end_date);
     let sort = (memory.media || []).length, cover = memory.cover_media_id;
-    for (let i = 0; i < files.length; i++) {
-      onProgress && onProgress(i, files.length, VL.t('red.laddar', { i: i + 1, n: files.length }));
-      const p = await VL.media.process(files[i], pct => onProgress && onProgress(i, files.length, VL.t('red.komprimerar', { p: Math.round(pct * 100) })));
+    const kvar = files.filter(f => !klara.has(filNyckel(f))), hoppade = [];
+    for (let i = 0; i < kvar.length; i++) {
+      onProgress && onProgress(i, kvar.length, VL.t('red.laddar', { i: i + 1, n: kvar.length }));
+      let p;
+      try { p = await VL.media.process(kvar[i], pct => onProgress && onProgress(i, kvar.length, VL.t('red.komprimerar', { p: Math.round(pct * 100) }))); }
+      catch (e) { hoppade.push(kvar[i].name + ' – ' + (e.message || VL.t('fel.allmant'))); klara.add(filNyckel(kvar[i])); continue; }
       let day = p.takenAt ? D.dayKey(p.takenAt) : memory.start_date;
       if (!range.includes(day)) { VL.toast(VL.t('red.utanfor', { dag: day })); day = memory.start_date; }
-      const row = await VL.api.uploadMedia(memory.id, p, day, sort++);
-      if (!cover && row.kind === 'photo') { cover = row.id; await VL.api.setCover(memory.id, row.id); }   // ljud/film blir aldrig omslag automatiskt
-      memory.media = [...(memory.media || []), row]; memory.cover_media_id = cover;
-      onKlar && onKlar(i + 1);
+      const row = await VL.api.uploadMedia(memory.id, p, day, sort++);   // nätfel avbryter: nästa försök börjar med den här filen
+      memory.media = [...(memory.media || []), row]; klara.add(filNyckel(kvar[i]));
+      if (!cover && row.kind === 'photo') { await VL.api.setCover(memory.id, row.id); cover = row.id; }   // ljud/film blir aldrig omslag automatiskt
+      memory.cover_media_id = cover;
     }
-    onProgress && onProgress(files.length, files.length, VL.t('red.klart'));
+    // "resten är uppladdade" bara när det finns en rest – hoppades alla valda filer över säger beskedet det
+    const besked = hoppade.length ? VL.t(hoppade.length < files.length ? 'red.hoppade' : 'red.hoppade_alla', { filer: hoppade.join(' ') }) : VL.t('red.klart');
+    onProgress && onProgress(kvar.length, kvar.length, besked);
+    if (hoppade.length) throw Object.assign(new Error(besked), { hoppade });
   }
 
   // Kategori-chips: returnerar {node, valda()}.
@@ -47,7 +57,7 @@
     const prev = el('div', { class: 'block forhands' }, el('div', { class: 'block__bild' }, prevBild ? el('img', { src: VL.minneSida.urls[prevBild.thumb_path], 'data-roll': 'bild', alt: '' }) : null), el('div', { class: 'block__text' }, el('h2', { class: 'block__titel', 'data-roll': 'titel' }), el('p', { class: 'block__berattelse', 'data-roll': 'text' })));
     const uppd = () => { prev.querySelector('[data-roll=titel]').textContent = titel.value || '—'; prev.querySelector('[data-roll=text]').textContent = story.value.slice(0, 160); VL.style.applyStyle(prev, s); };
     const valRad = (key, lista, fn, label) => el('div', { class: 'val' }, lista.map(v => { const b = el('button', { type: 'button', class: s[key] === v ? 'pa' : '', text: label(v), onclick: () => { s[key] = v; b.parentNode.querySelectorAll('button').forEach(x => x.classList.remove('pa')); b.classList.add('pa'); uppd(); } }); return b; }));
-    const farger = ['#2b1a24', '#ffffff', '#ffd9a3', '#e84f86', '#1f9a8c', '#e0822a', '#7b5cd6'];
+    const farger = ['#2b1a24', '#ffffff', '#fbe4ea', '#7d1d3f', '#c73e70', '#7a4b2e', '#d4a882'];
     const storlek = el('input', { type: 'range', min: 14, max: 72, value: s.size, oninput: e => { s.size = Number(e.target.value); uppd(); } });
     const fx = el('input', { type: 'range', min: 0, max: 100, value: s.focusX, oninput: e => { s.focusX = Number(e.target.value); uppd(); } });
     const fy = el('input', { type: 'range', min: 0, max: 100, value: s.focusY, oninput: e => { s.focusY = Number(e.target.value); uppd(); } });
@@ -71,6 +81,7 @@
     const tryck = x => async () => {
       if (tarBort) return;
       if (valjer) { if (valda.has(x.id)) valda.delete(x.id); else valda.add(x.id); uppd(); return; }
+      if (x.kind === 'audio') return;   // ljud kan inte vara omslag (sidan visar då första bilden)
       await VL.api.setCover(m.id, x.id); await ladda(); d.close();
     };
     const tumme = x => el('div', { 'data-id': x.id },
@@ -110,7 +121,19 @@
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
     const topp = el('div', { class: 'urval-topp' }, el('span', { class: 'dampad', text: VL.urval.sammanfattning(m.media) }), m.media.length ? valjKnapp : null);
-    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, topp, valRad, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && await VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
+    // Efter ett fel: Spara igen fortsätter där det stannade (klara), och Avbryt visar ändå det som hann komma upp.
+    const klara = new Set(), antal0 = m.media.length;   // laddaUpp lägger varje uppladdad fil i m.media
+    let meddelade = 0;
+    const avsluta = async () => { const n = m.media.length - antal0 - meddelade; if (n) { meddelade += n; VL.notis && await VL.notis.skicka('bilder', m, n); } await ladda(); };
+    // Avbryt/Escape medan filerna laddas upp: uppladdningen fortsätter och Spara avslutar omgången – en notis, inte två.
+    let laddar = false;
+    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, topp, valRad, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
+      laddar = true;
+      try { if (filer.files.length) await laddaUpp(m, [...filer.files], fs.set, klara); }
+      catch (e) { if (!d.dialog.open) await avsluta().catch(() => {}); throw e; }   // rutan stängdes under tiden: visa ändå det som hann komma upp
+      finally { laddar = false; }
+      await avsluta(); } });
+    d.dialog.addEventListener('close', () => { if (!laddar && m.media.length - antal0 > meddelade) avsluta().catch(() => {}); });
   }
 
   function datumDialog() {
@@ -206,7 +229,11 @@
       rad('meny.kopiera', async () => { try { const k = await VL.api.duplicateMemory(m); location.href = 'minne.html?id=' + k.id; } catch (e) { VL.toast(e.message, 'fel'); } }),
       el('hr'),
       rad('meny.ta_bort_text', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_text'))) { await VL.api.updateMemory(m.id, { story: '' }); await ladda(); } }, true),
-      !VL.text.kanTaBort(VL.minneSida.prof, m) ? null : rad('meny.ta_bort_minne', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) }))) { await VL.api.deleteMemory(m); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); } }, true));
+      !VL.text.kanTaBort(VL.minneSida.prof, m) ? null : rad('meny.ta_bort_minne', async () => {
+        if (!(await VL.confirmDialog(VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) })))) return;
+        try { await VL.api.deleteMemory(m); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); }
+        catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); await ladda().catch(() => {}); }   // visa hur det faktiskt ser ut nu
+      }, true));
     knapp.parentNode.append(meny);
     meny.querySelector('button').focus();
     const bort = e => { if (!meny.contains(e.target) && e.target !== knapp) { meny.remove(); document.removeEventListener('click', bort, true); } };
@@ -240,16 +267,23 @@
       const cd = VL.dates.captureDate({ exifDate: exif, filename: f.name, lastModified: f.lastModified, isVideo: VL.media.isVideo(f) });
       if (cd.date) { start.value = D.dayKey(cd.date); start.dispatchEvent(new Event('change')); }   // slutdatumet följer med
     };
-    let mem = null, klara = 0;   // om något går fel och man trycker Spara igen: fortsätt, skapa inte ett nytt minne
+    // Om något går fel och man trycker Spara igen: fortsätt, skapa inte ett nytt minne. Det man ändrat i rutan sparas,
+    // och filer som redan är uppe (klara) laddas inte upp igen – inte heller om man väljer om filerna.
+    let mem = null;
+    const klara = new Set();
+    const falten = () => ({ kind: typ.value, start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null, title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value });
     const ruta = VL.openDialog(VL.t('nav.nytt'), el('div', {}, falt('red.typ', typ), falt('red.start', start), falt('red.slut', slut), falt('red.titel', titel), falt('red.plats', platsFalt), falt('red.berattelse', story), falt('meny.kategorier', katVal.node), falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => {
       if (slut.value && slut.value < start.value) { VL.toast(VL.t('red.slut'), 'fel'); return false; }
-      if (!mem) {
-        mem = await VL.api.createMemory({ kind: typ.value, start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null, title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, visibility: 'private' });
-        mem.media = [];
-        await VL.api.setCategories(mem.id, katVal.valda());
+      const f = falten();
+      if (!mem) { mem = await VL.api.createMemory({ ...f, visibility: 'private' }); mem.media = []; }
+      else if (Object.keys(f).some(k => f[k] !== mem[k])) {
+        await VL.api.updateMemory(mem.id, f);
+        // redan uppladdade filers dagar följer med (samma regel som i datumrutan)
+        for (const x of mem.media) { const nd = D.remapDay(x.day, mem.start_date, f.start_date, f.end_date); if (nd !== x.day) { await VL.api.setMediaDay(x.id, nd); x.day = nd; } }
+        Object.assign(mem, f);
       }
-      const kvar = [...filer.files].slice(klara), fore = klara;
-      if (kvar.length) await laddaUpp(mem, kvar, fs.set, n => { klara = fore + n; });
+      await VL.api.setCategories(mem.id, katVal.valda());
+      if (filer.files.length) await laddaUpp(mem, [...filer.files], fs.set, klara);
       if (VL.notis) await VL.notis.skicka('nytt', mem);   // väntar: sidbytet skulle annars avbryta anropet
       location.href = 'minne.html?id=' + mem.id; } });
     ruta.dialog.dataset.nytt = '1';   // spärren mot en andra ruta

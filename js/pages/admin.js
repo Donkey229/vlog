@@ -64,16 +64,19 @@
           const cd = VL.dates.captureDate({ exifDate: datum, filename: f.name, lastModified: f.lastModified, isVideo: VL.media.isVideo(f) });
           const k = D.dayKey(cd.date || new Date(f.lastModified)); (perDag[k] || (perDag[k] = [])).push(f);
         }
-        let klara = 0;
+        let klara = 0; const hoppade = [];   // filer som inte gick att använda – visas alla när importen är klar
         for (const k of Object.keys(perDag).sort()) {
           // finns dagen redan (t.ex. vid en andra import) läggs filerna där i stället för i en dubblett
           const mem = VL.dates.valjImportMinne(await VL.api.importKandidater(k), k)
             || { ...(await VL.api.createMemory({ kind: 'dag', start_date: k, end_date: null, title: '', story: '', visibility: 'private' })), media: [] };
-          await VL.redigera.laddaUpp(mem, perDag[k], (i, n) => { bar.style.width = Math.round(100 * (klara + i) / lista.length) + '%'; text.textContent = VL.t('admin.importerar', { i: klara + i + 1, n: lista.length }); });
+          try { await VL.redigera.laddaUpp(mem, perDag[k], (i, n) => { bar.style.width = Math.round(100 * (klara + i) / lista.length) + '%'; text.textContent = VL.t('admin.importerar', { i: klara + i + 1, n: lista.length }); }); }
+          catch (x) { if (!x.hoppade) throw x; hoppade.push(...x.hoppade); }   // en fil som inte går att använda stoppar inte importen (ett nätfel gör det)
           klara += perDag[k].length;
         }
-        bar.style.width = '100%'; text.textContent = VL.t('red.klart');
-        if (VL.notis && lista.length) await VL.notis.skicka('bilder', null, lista.length);
+        const uppe = lista.length - hoppade.length;
+        bar.style.width = '100%'; text.textContent = hoppade.length ? VL.t(uppe ? 'red.hoppade' : 'red.hoppade_alla', { filer: hoppade.join(' ') }) : VL.t('red.klart');
+        if (hoppade.length) VL.toast(text.textContent, 'fel');
+        if (VL.notis && uppe) await VL.notis.skicka('bilder', null, uppe);
       } catch (x) { fel(x); } finally { ev.target.disabled = false; VL.upptagen--; }
     } })));
 
@@ -85,8 +88,8 @@
       try {
         const zip = new JSZip(), huvuden = await VL.api.headers(), alla = [];
         for (const h of huvuden) alla.push(await VL.api.memory(h.id));
-        const [om, kategorier, profiler] = await Promise.all([VL.api.about(), VL.api.categories(), VL.sb.from('profiles').select('id,display_name,role,lang,avatar_path').then(r => r.data || [])]);
-        zip.file('data.json', JSON.stringify({ exporterad: new Date().toISOString(), settings: s, about: om, categories: kategorier, profiles: profiler, memories: alla }, null, 2));
+        const [om, kategorier, profiler, traffar] = await Promise.all([VL.api.about(), VL.api.categories(), VL.sb.from('profiles').select('id,display_name,role,lang,avatar_path').then(r => r.data || []), VL.api.traffar()]);
+        zip.file('data.json', JSON.stringify({ exporterad: new Date().toISOString(), settings: s, about: om, categories: kategorier, profiles: profiler, memories: alla, traffar }, null, 2));
         const paths = [...new Set([...alla.flatMap(m => m.media.flatMap(x => [x.path, x.thumb_path, x.poster_path])), om && om.photo_path, s.couple_path, ...profiler.map(p => p.avatar_path)].filter(Boolean))];
         const saknas = [];
         for (let i = 0; i < paths.length; i += 20) {   // signera strax före nedladdning, i små omgångar
