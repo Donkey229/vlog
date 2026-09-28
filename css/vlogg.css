@@ -153,6 +153,23 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .tummar img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
 .tummar button { position: absolute; top: 4px; right: 4px; border: 0; border-radius: 99px; background: rgba(255,255,255,.92); font-size: 11px; padding: 1px 6px; }
 .tummar .omslag { outline: 3px solid var(--rose); }
+.tummar .tumme__par { left: 4px; right: auto; }
+.tummar .tumme__typ { position: absolute; left: 4px; bottom: 4px; background: rgba(20,10,16,.72); color: #fff; border-radius: 99px; padding: 1px 7px; font-size: 11px; pointer-events: none; }
+.tummar .tumme__tom { display: grid; place-items: center; aspect-ratio: 1; border-radius: 8px; background: var(--pink); font-size: 22px; cursor: pointer; }
+.tummar .tumme__bock { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 99px; background: var(--rose); color: #fff; font-size: 14px; line-height: 24px; text-align: center; pointer-events: none; }
+.tummar.valjer .tumme__bort, .tummar.valjer .tumme__par { display: none; }
+.tummar.valjer img, .tummar.valjer .tumme__tom { cursor: pointer; opacity: .75; }
+.tummar .vald img, .tummar .vald .tumme__tom { opacity: 1; outline: 3px solid var(--rose); outline-offset: -3px; }
+.tummar .vald .tumme__bock { display: block; }
+.urval-topp { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.urval-rad { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.urval-rad small { width: 100%; }
+.urval-snabb { display: flex; flex-wrap: wrap; gap: 10px; flex: 1; }
+.knapp.fara { background: #c0392b; color: #fff; }
+.knapp:disabled { opacity: .45; cursor: default; }
+.galleri-flikar { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
+.galleri-flikar .flik { border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.galleri-flikar .flik.pa { background: var(--rose); color: #fff; border-color: var(--rose); }
 .framsteg { height: 6px; background: var(--pink); border-radius: 99px; overflow: hidden; margin-top: 10px; }
 .framsteg i { display: block; height: 100%; background: var(--rose); width: 0; transition: width .2s; }
 
