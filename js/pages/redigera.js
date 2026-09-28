@@ -125,7 +125,7 @@
       rad('meny.kopiera', async () => { try { const k = await VL.api.duplicateMemory(m); location.href = 'minne.html?id=' + k.id; } catch (e) { VL.toast(e.message, 'fel'); } }),
       el('hr'),
       rad('meny.ta_bort_text', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_text'))) { await VL.api.updateMemory(m.id, { story: '' }); await ladda(); } }, true),
-      rad('meny.ta_bort_minne', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) }))) { await VL.api.deleteMemory(m); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); } }, true));
+      !VL.text.kanTaBort(VL.minneSida.prof, m) ? null : rad('meny.ta_bort_minne', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) }))) { await VL.api.deleteMemory(m); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); } }, true));
     knapp.parentNode.append(meny);
     meny.querySelector('button').focus();
     const bort = e => { if (!meny.contains(e.target) && e.target !== knapp) { meny.remove(); document.removeEventListener('click', bort, true); } };

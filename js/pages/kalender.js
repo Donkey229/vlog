@@ -17,7 +17,7 @@
       el('small', { text: D.formatRange(r.start_date, r.end_date) + ' · ' + ((r.memory_categories || []).map(c => katNamn(c.slug)).filter(Boolean).join(', ') || VL.t('typ.' + r.kind)) + (r.likes ? ' · ♥ ' + r.likes : '') }),
       el('h3', { text: r.title || '—' }),
       r.place ? el('small', { class: 'plats', text: '📍 ' + r.place }) : null,
-      personer[r.created_by] ? el('small', { class: 'av', text: VL.t('minne.skrivet_av', { namn: personer[r.created_by].display_name }) }) : null))));
+      personer[VL.text.skribent(r)] ? el('small', { class: 'av', text: VL.t('minne.skrivet_av', { namn: personer[VL.text.skribent(r)].display_name }) }) : null))));
   const tomt = () => el('p', { class: 'tomlage', text: VL.t('kal.tom') });
   const antal = Math.min(600, Math.max(60, parseInt(q.get('antal'), 10) || 60));
   const visaFler = rader => rader.length >= antal ? el('p', { style: { textAlign: 'center', marginTop: '18px' } }, el('a', { class: 'knapp knapp--sekundar', href: (() => { const u = new URLSearchParams(location.search); u.set('antal', antal + 60); return 'index.html?' + u; })(), text: VL.t('kal.visa_fler') })) : null;

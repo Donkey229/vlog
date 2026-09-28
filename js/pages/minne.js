@@ -15,7 +15,7 @@
     if (!data) { main.replaceChildren(el('p', { class: 'tomlage', text: VL.t('minne.saknas') })); return null; }
     const paths = data.media.flatMap(m => [m.path, m.thumb_path, m.poster_path]);
     const [urls, huvuden, personer, kategorier, relaterade] = await Promise.all([VL.api.signedUrls(paths, 3600), VL.api.headers(), VL.api.profiles(), VL.api.categories(), VL.api.related(data, 3)]);
-    const kanRedigera = !!prof && (prof.role === 'admin' || (prof.role === 'editor' && data.created_by === prof.id));
+    const kanRedigera = VL.text.kanRedigera(prof);   // alla minnen (sql/12); ta bort styrs separat
     VL.minneSida = { data, urls, prof, huvuden, personer, kategorier, relaterade, kanRedigera, rita, ladda };
     return data;
   }
@@ -28,7 +28,7 @@
     const nFoto = data.media.filter(m => m.kind === 'photo').length, nFilm = data.media.filter(m => m.kind === 'video').length;
     const dagar = D.rangeDays(data.start_date, data.end_date).length;
     const s = VL.style.normalizeStyle(data.style);
-    const forf = personer[data.created_by];
+    const forf = personer[VL.text.skribent(data)];   // den som senast ändrade
     const h = el('section', { class: 'hjalte' },
       bild ? el('img', { src: bild, alt: '', style: { objectPosition: s.focusX + '% ' + s.focusY + '%' } }) : null,
       el('a', { class: 'hjalte__tillbaka', href: 'index.html?vy=kalender&man=' + data.start_date.slice(0, 7), text: VL.t('minne.tillbaka') }),
