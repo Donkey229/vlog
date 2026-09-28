@@ -8,12 +8,10 @@ window.VL = window.VL || {};
     try { localStorage.setItem(KEY, t); } catch (e) {}
     return t;
   }
-  // mq = resultatet av matchMedia('(prefers-color-scheme: dark)') – går att skicka in i tester
-  function init(mq) {
+  // Vloggen är vit/rosa som standard (ägarens val) – mörkt läge bara om man själv trycker ☾. Enhetens mörka läge ignoreras.
+  function init() {
     const saved = read();
-    if (saved === 'dark' || saved === 'light') { document.documentElement.dataset.theme = saved; return saved; }
-    const m = mq || (window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false });
-    const t = m.matches ? 'dark' : 'light';
+    const t = saved === 'dark' ? 'dark' : 'light';
     document.documentElement.dataset.theme = t;
     return t;
   }

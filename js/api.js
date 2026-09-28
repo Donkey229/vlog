@@ -59,6 +59,9 @@
     return withThumbs(rows);
   }
   async function search(q) { return withThumbs(must(await sb.rpc('search_memories', { q }))); }
+  // Minnen som täcker dagen k (för importen – se VL.dates.valjImportMinne). media behövs för sorteringsordningen.
+  const importKandidater = async (k) => must(await sb.from('memories').select('id,kind,start_date,end_date,cover_media_id,media!media_memory_id_fkey(id)')
+    .lte('start_date', k).or(`end_date.gte.${k},and(end_date.is.null,start_date.eq.${k})`));
   async function byIds(ids) {
     if (!ids.length) return [];
     const rows = must(await sb.from('memories').select(HEAD + ',' + CATS).in('id', ids));
@@ -187,7 +190,7 @@
     return data;
   }
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, search, popular, related, memory,
-    createMemory, updateMemory, deleteMemory, duplicateMemory, uploadMedia, removeMedia, setCover, setMediaDay, mergeInto, addLink, removeLink,
+    createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
     about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart };
 })(window.VL);

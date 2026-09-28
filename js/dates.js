@@ -49,5 +49,14 @@
     return moved < newStart ? newStart : moved > end ? end : moved;
   }
 
-  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay };
+  // Import: vilket befintligt minne ska dagens filer hamna i? Samma dag först, annars den kortaste resan/utflykten som
+  // täcker dagen, annars null (då skapas ett nytt). Gör att man kan importera igen utan att få dubbletter.
+  function valjImportMinne(minnen, k) {
+    const tacker = (minnen || []).filter(m => m.start_date <= k && k <= (m.end_date || m.start_date));
+    const dag = tacker.find(m => m.kind === 'dag' && !m.end_date && m.start_date === k);
+    if (dag) return dag;
+    const langd = m => daysBetween(m.start_date, m.end_date || m.start_date);
+    return tacker.sort((a, b) => langd(a) - langd(b))[0] || null;
+  }
+  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay, valjImportMinne };
 })(window.VL);
