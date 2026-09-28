@@ -19,6 +19,28 @@
     for (const kid of kids.flat()) { if (kid == null || kid === false) continue; parent.append(kid instanceof Node ? kid : document.createTextNode(String(kid))); }
     return parent;
   };
+  // Bildvisare i helskärm: bläddra med pilar, tangenter eller svep. urls() ger aktuella signerade adresser.
+  VL.ljusbord = function (lista, start, urls) {
+    const el = VL.el;
+    let i = start;
+    const box = el('div', { class: 'ljus', role: 'dialog', 'aria-modal': 'true', tabindex: '-1' });
+    const visa = () => {
+      const m = lista[i], u = urls();
+      box.querySelector('img,video')?.remove();
+      box.prepend(m.kind === 'video' ? el('video', { src: u[m.path], poster: u[m.poster_path], controls: true, autoplay: true, playsInline: true }) : el('img', { src: u[m.path], alt: m.caption || '' }));
+    };
+    const stang = () => { box.remove(); document.removeEventListener('keydown', tangent); };
+    const steg = d => { i = (i + d + lista.length) % lista.length; visa(); };
+    const tangent = e => { if (e.key === 'Escape') stang(); if (e.key === 'ArrowRight') steg(1); if (e.key === 'ArrowLeft') steg(-1); };
+    let x0 = null;
+    box.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    box.addEventListener('touchend', e => { if (x0 != null) { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) steg(dx < 0 ? 1 : -1); } x0 = null; });
+    VL.add(box, el('button', { class: 'stang', 'aria-label': VL.t('minne.stang'), text: '×', onclick: stang }),
+      lista.length > 1 ? el('button', { class: 'fore', 'aria-label': '‹', text: '‹', onclick: () => steg(-1) }) : null,
+      lista.length > 1 ? el('button', { class: 'efter', 'aria-label': '›', text: '›', onclick: () => steg(1) }) : null);
+    document.addEventListener('keydown', tangent);
+    document.body.append(box); visa(); box.focus();
+  };
   VL.toast = function (text, kind = 'ok') {
     const t = VL.el('div', { class: 'toast toast--' + kind, role: 'status', text });
     document.body.append(t); setTimeout(() => t.remove(), 4000);
@@ -45,12 +67,12 @@
     const here = location.pathname.split('/').pop() + location.search;
     const { data: { session } } = await VL.sb.auth.getSession();
     if (session && VL.session.expired(VL.session.lastLogin())) {   // en gång i veckan: logga in igen
-      await VL.sb.auth.signOut(); VL.session.clear();
+      await VL.session.loggaUtHar(VL.sb);
       location.replace('auth.html?veckan=1&next=' + encodeURIComponent(here)); return null;
     }
     if (!session) { if (allowAnon) return null; location.replace('auth.html?next=' + encodeURIComponent(here)); return null; }
     const prof = await VL.api.me();
-    if (!prof) { await VL.sb.auth.signOut(); location.replace('auth.html'); return null; }
+    if (!prof) { await VL.session.loggaUtHar(VL.sb); location.replace('auth.html'); return null; }
     const { data: aal } = await VL.sb.auth.mfa.getAuthenticatorAssuranceLevel();
     // Tvåstegskod krävs inte längre av någon (ägarens beslut); frågas bara om ett konto ändå har en aktiv kod.
     const needsCode = aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2';

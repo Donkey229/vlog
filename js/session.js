@@ -18,5 +18,8 @@ window.VL = window.VL || {};
     if (/Android/i.test(ua)) return 'android';
     return 'dator';
   }
-  VL.session = { DAGAR, lastLogin, markLogin, clear, expired, platform };
+  // Veckoutloggning: bara den här enheten. supabase-js loggar annars ut ALLA enheter (scope 'global' som standard),
+  // och varje webbläsare/app har sin egen vecka – på iPhone räknas Safari och hemskärmsappen som två.
+  async function loggaUtHar(sb) { await sb.auth.signOut({ scope: 'local' }); clear(); }
+  VL.session = { DAGAR, lastLogin, markLogin, clear, expired, platform, loggaUtHar };
 })(window.VL);
