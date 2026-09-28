@@ -9,6 +9,24 @@ const CACHE = 'emma-och-jock-v1';
 function farsk(req) {
   return req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: 'manual' }) : new Request(req, { cache: 'no-cache' });
 }
+// Push-notis → vad som visas. Öppnar bara vloggens egna sidor (inget annat går att smyga in via notisen).
+function notisVisning(d) {
+  const url = /^(minne\.html\?id=[0-9a-f-]{36}|index\.html)$/.test((d && d.url) || '') ? d.url : 'index.html';
+  return { title: 'Emma & Jock', options: { body: String((d && d.text) || '').slice(0, 140), icon: 'img/app-192.png', badge: 'img/app-192.png', tag: url, data: { url } } };
+}
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
+  const n = notisVisning(d);
+  e.waitUntil(self.registration.showNotification(n.title, n.options));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || 'index.html', self.registration.scope).href;
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
+    const f = lista.find(c => c.url.startsWith(self.registration.scope));
+    return f ? f.navigate(url).then(c => (c || f).focus()) : clients.openWindow(url);
+  }));
+});
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(k => Promise.all(k.filter(n => n !== CACHE).map(n => caches.delete(n)))).then(() => self.clients.claim())));
