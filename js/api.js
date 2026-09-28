@@ -193,8 +193,12 @@
     if (error) { let msg = error.message; try { msg = (await error.context.json()).fel || msg; } catch (e) {} throw new Error(msg); }
     return data;
   }
+  // push-notiser: spara/ta bort den här enheten, och be servern skicka en notis till de andra
+  const sparaPrenumeration = async (sub, enhet) => must(await sb.rpc('spara_prenumeration', { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_enhet: enhet || '' }));
+  const taBortPrenumeration = async endpoint => must(await sb.from('push_subscriptions').delete().eq('endpoint', endpoint));
+  const notis = async (text, url) => { const { error } = await sb.functions.invoke('notis', { body: { text, url } }); if (error) throw error; };
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
     createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, setCover, setMediaDay, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
-    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart };
+    about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, admin, byStart, sparaPrenumeration, taBortPrenumeration, notis };
 })(window.VL);

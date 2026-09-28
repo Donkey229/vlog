@@ -37,18 +37,20 @@
       tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), tab('om', 'nav.om', 'om.html')), right);
     VL.renderFooter(s);
     if (redaktor && VL.narvaro) VL.api.profiles().then(p => VL.narvaro.starta(prof, p)).catch(() => {});
+    if (redaktor && VL.notis) setTimeout(VL.notis.erbjud, 1500);   // fråga en gång om notiser (kräver ett tryck)
     return s;
   };
 
   // Profilmeny: logga ut här, eller på alla enheter (t.ex. om en telefon kommit bort).
   function profilMeny(knapp) {
     const gammal = document.getElementById('profilmeny'); if (gammal) { gammal.remove(); return; }
-    const ut = async scope => { await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
+    const ut = async scope => { if (VL.notis) await VL.notis.stangAv(true).catch(() => {}); await VL.sb.auth.signOut({ scope }); VL.session.clear(); location.href = 'auth.html'; };
     // Platsdelning är frivillig och av som standard; bara medan appen är öppen, sparas aldrig.
     const plats = VL.narvaro && VL.el('button', { type: 'button', role: 'menuitem', text: VL.t(VL.narvaro.delar() ? 'narvaro.dela_av' : 'narvaro.dela_pa'), onclick: () => {
       const pa = !VL.narvaro.delar(); VL.narvaro.satDela(pa); if (pa) VL.toast(VL.t('narvaro.delar_nu')); m.remove(); } });
     const m = VL.el('div', { id: 'profilmeny', class: 'meny meny--profil', role: 'menu' },
       document.getElementById('narvaro') ? plats : null,
+      document.getElementById('narvaro') && VL.notis ? VL.notis.knapp(() => m.remove()) : null,
       VL.el('button', { type: 'button', role: 'menuitem', text: VL.t('nav.logga_ut'), onclick: () => ut('local') }),
       VL.el('button', { type: 'button', role: 'menuitem', class: 'fara', text: VL.t('nav.logga_ut_alla'), onclick: () => ut('global') }));
     knapp.parentNode.append(m); m.querySelector('button').focus();
