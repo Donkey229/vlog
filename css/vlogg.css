@@ -209,6 +209,30 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .traffar-forr { margin-top: 18px; }
 .traffar-forr summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
 .falt-rad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vag-vaxla { margin-top: 10px; }
+.vag-behallare { margin: 14px -4px 0; }
+.vag { position: relative; }
+.vag__svg { position: absolute; inset: 0; overflow: visible; }
+.vag__kant { fill: none; stroke: #e9c94f; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
+.vag__yta { fill: none; stroke: #fbe78c; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
+.vag__mitt { fill: none; stroke: #fffdf2; stroke-width: 2.5; stroke-dasharray: 9 9; stroke-linecap: round; }
+.vag__framtid { fill: none; stroke: #fbe78c; stroke-width: 22; stroke-linecap: butt; stroke-dasharray: 16 12; opacity: .9; }
+.vag__station { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; width: 104px; color: inherit; text-decoration: none; text-align: center; z-index: 2; }
+.vag__bild { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.18); background: var(--pink); display: grid; place-items: center; font-size: 22px; color: var(--rose); }
+.vag__station--traff .vag__bild { background: #fff; border-style: dashed; border-color: var(--rose); }
+.vag__resa { position: absolute; top: -4px; right: 18px; background: var(--rose); color: #fff; border-radius: 99px; font-size: 12px; padding: 1px 6px; }
+.vag__text { display: flex; flex-direction: column; margin-top: 4px; line-height: 1.2; }
+.vag__text small { font-weight: 700; color: #b3134d; font-size: 12px; }
+:root[data-theme="dark"] .vag__text small { color: var(--rose); }
+.vag__station--hoger .vag__text { position: relative; left: -38px; text-align: right; align-items: flex-end; }
+.vag__station--vanster .vag__text { position: relative; left: 38px; text-align: left; align-items: flex-start; }
+.vag__text span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vag__skylt { position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #5c4608; background: #fbe78c; padding: 0 4px; border-radius: 4px; white-space: nowrap; z-index: 1; pointer-events: none; }
+.vag__start { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #8a6d12; }
+.vag__nu { position: absolute; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: var(--rose); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(232,79,134,.35); z-index: 2; font-size: 13px; line-height: 1.1; }
+@media (min-width: 760px) { .vag__bild { width: 76px; height: 76px; } .vag__station { transform: translate(-50%, -38px); width: 130px; } .vag__text span, .vag__text small { font-size: 13px; }
+  .vag__station--hoger .vag__text { left: -52px; } .vag__station--vanster .vag__text { left: 52px; } }
+:root[data-theme="dark"] .vag__start { color: #f3d36b; }   /* skylten ligger på den gula vägen och behåller sin mörka färg */
 .galleri-flikar { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
 .galleri-flikar .flik { border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
 .galleri-flikar .flik.pa { background: var(--rose); color: #fff; border-color: var(--rose); }
