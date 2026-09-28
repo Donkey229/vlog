@@ -228,6 +228,9 @@ h1.stor { font: 400 34px/1.1 var(--serif); }
 .app-tips { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 55; display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; box-shadow: 0 16px 40px rgba(0,0,0,.2); font-size: 14px; }
 .app-tips span { flex: 1; }
 @media (min-width: 700px) { .app-tips { left: auto; max-width: 420px; } }
+.notisfraga { flex-wrap: wrap; }
+.notisfraga p { flex: 1 1 200px; margin: 0; }
+.notisfraga div { display: flex; gap: 8px; }
 button.av { border: 0; cursor: pointer; }
 .top__hoger { position: relative; }
 .meny--profil { top: 44px; right: 0; }
