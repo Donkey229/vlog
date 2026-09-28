@@ -1,0 +1,5 @@
+supabase-js 2.117.2
+exifr 7.1.3
+jszip 3.10.2
+mediabunny 1.60.0
+mediabunny-fil dist/bundles/mediabunny.min.cjs (IIFE, sätter window.Mediabunny)
