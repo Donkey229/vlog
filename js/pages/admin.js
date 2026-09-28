@@ -54,7 +54,7 @@
   main.append(el('section', { class: 'sektion' }, el('h2', { text: VL.t('admin.import') }), el('p', { class: 'dampad', text: VL.t('admin.import_text') }), filer,
     el('div', { class: 'framsteg' }, bar), text,
     el('button', { class: 'knapp', type: 'button', text: VL.t('admin.import'), onclick: async ev => {
-      ev.target.disabled = true;
+      ev.target.disabled = true; VL.upptagen = (VL.upptagen || 0) + 1;   // sidan laddas inte om mitt i (version.js)
       try {
         const lista = [...filer.files];
         const perDag = {};
@@ -73,15 +73,15 @@
           klara += perDag[k].length;
         }
         bar.style.width = '100%'; text.textContent = VL.t('red.klart');
-        if (VL.notis && lista.length) VL.notis.skicka('bilder', null, lista.length);
-      } catch (x) { fel(x); } finally { ev.target.disabled = false; }
+        if (VL.notis && lista.length) await VL.notis.skicka('bilder', null, lista.length);
+      } catch (x) { fel(x); } finally { ev.target.disabled = false; VL.upptagen--; }
     } })));
 
   // export: data.json + alla filer i en zip
   const exText = el('p', { class: 'dampad' });
   main.append(el('section', { class: 'sektion' }, el('h2', { text: VL.t('admin.export') }), exText,
     el('button', { class: 'knapp', type: 'button', text: VL.t('admin.export'), onclick: async ev => {
-      ev.target.disabled = true;
+      ev.target.disabled = true; VL.upptagen = (VL.upptagen || 0) + 1;   // sidan laddas inte om mitt i (version.js)
       try {
         const zip = new JSZip(), huvuden = await VL.api.headers(), alla = [];
         for (const h of huvuden) alla.push(await VL.api.memory(h.id));
@@ -103,7 +103,7 @@
         const a = el('a', { href: URL.createObjectURL(blob), download: 'emma-och-jock-' + D.todayKey() + '.zip' }); document.body.append(a); a.click(); a.remove();
         if (saknas.length) { exText.textContent = VL.t('admin.export_saknas', { n: saknas.length }); VL.toast(exText.textContent, 'fel'); return; }
         exText.textContent = VL.t('red.klart');
-      } catch (x) { fel(x); } finally { ev.target.disabled = false; }
+      } catch (x) { fel(x); } finally { ev.target.disabled = false; VL.upptagen--; }
     } })));
 
   // sociala länkar
@@ -129,15 +129,15 @@
     } }, kat.slug, kat.sv, kat.en, kat.th, el('button', { class: 'knapp', text: VL.t('admin.ny_kategori') }))));
 
   // aktivitetslogg
-  const logg = el('table', { class: 'tabell' });
+  // aktivitetsloggen som bilder + klartext (VL.logg), inte sökvägar
+  const logg = el('div', { class: 'logg' });
   main.append(el('section', { class: 'sektion' }, el('h2', { text: VL.t('admin.aktivitet') }), logg));
   const ritaLogg = async () => {
     const [rader, pers] = await Promise.all([VL.api.activity(50), VL.api.profiles()]);
-    logg.replaceChildren(...rader.map(r => el('tr', {},
-      el('td', { text: new Intl.DateTimeFormat(VL.locale(), { dateStyle: 'short', timeStyle: 'short' }).format(new Date(r.at)) }),
-      el('td', { text: (pers[r.user_id] && pers[r.user_id].display_name) || '—' }),
-      el('td', { text: r.action + ' · ' + r.what }),
-      el('td', { text: r.summary }))));
+    const media = await VL.api.mediaById([...new Set(rader.filter(r => r.what === 'media' && r.ref).map(r => r.ref))]);
+    const minnen = [...new Set(rader.map(r => VL.logg.beskriv(r, media[r.ref]).minne).filter(Boolean))];
+    const [urls, titlar] = await Promise.all([VL.api.signedUrls(Object.values(media).map(m => m.thumb_path)), VL.api.minnesTitlar(minnen)]);
+    logg.replaceChildren(...rader.map(r => VL.logg.rad(r, media[r.ref], pers[r.user_id], urls, titlar)));
   };
 
   try { await Promise.all([ritaPersoner(), ritaVantande(), ritaKat(), ritaLogg()]); } catch (e) { fel(e); }

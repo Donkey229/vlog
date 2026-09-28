@@ -57,7 +57,7 @@
     const gillat = jag && data.likes.some(l => l.user_id === jag);
     const omLadda = async () => { await ladda(); rita(); };
     kropp.append(el('div', { class: 'socialt' },
-      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }), onclick: async () => { try { await VL.api.toggleLike(data.id, !gillat); if (!gillat && VL.notis) VL.notis.skicka('gilla', data); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
+      prof ? el('button', { class: 'gilla' + (gillat ? ' pa' : ''), type: 'button', text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }), onclick: async ev => { ev.currentTarget.disabled = true; try { await VL.api.toggleLike(data.id, !gillat); if (!gillat && VL.notis) await VL.notis.skicka('gilla', data); await omLadda(); } catch (e) { VL.toast(e.message, 'fel'); } } })
            : el('span', { text: '♥ ' + VL.t('minne.gillar', { n: data.likes.length }) }),
       el('span', { text: '💬 ' + data.comments.filter(c => c.status === 'approved').length })));
     data.comments.forEach(c => {
@@ -82,7 +82,7 @@
       try {
         await VL.api.addComment(data.id, t, n, kanRedigera);
         text.value = '';
-        if (kanRedigera && VL.notis) VL.notis.skicka('kommentar', data);
+        if (kanRedigera && VL.notis) await VL.notis.skicka('kommentar', data);
         if (kanRedigera) await omLadda(); else VL.toast(VL.t('minne.kommentar_skickad'));
       } catch (e) { VL.toast(/för många|too many/i.test(e.message) ? VL.t('fel.spam') : (e.message || VL.t('fel.allmant')), 'fel'); }
     } }, prof ? null : namn, text, honung, el('button', { class: 'knapp', text: VL.t('minne.skicka') })));
@@ -92,6 +92,7 @@
     const { data, urls, huvuden, personer, kategorier, relaterade } = VL.minneSida;
     const s = VL.style.normalizeStyle(data.style);
     const dagar = D.rangeDays(data.start_date, data.end_date);
+    if (valdDag && !data.media.some(m => m.day === valdDag && visuell(m))) valdDag = null;   // t.ex. efter att dagens filer tagits bort
     const kropp = el('div', { class: 'kropp' });
     const katLista = (data.memory_categories || []).map(c => kategorier.find(k => k.slug === c.slug)).filter(Boolean);
     if (katLista.length) kropp.append(el('div', { class: 'chips' }, katLista.map(k => el('a', { href: 'index.html?vy=tidslinje&kat=' + k.slug, text: VL.api.catName(k) }))));
@@ -123,7 +124,8 @@
     const ljud = data.media.filter(m => m.kind === 'audio');
     if (ljud.length) kropp.append(el('div', { class: 'ljudlista' }, ljud.map(a => el('figure', {}, el('figcaption', { text: '♪ ' + (a.caption || VL.t('minne.ljud')) }), el('audio', { controls: true, preload: 'none', src: urls[a.path] })))));
     // bilder och filmer per dag – med flikar Alla · Bilder · Filmer när minnet har båda
-    const flikar = VL.urval ? VL.urval.galleriFlikar(alla, mediaFlik, k => { mediaFlik = k; rita(); }) : null;
+    const synliga = valdDag ? alla.filter(m => m.day === valdDag) : alla;   // flikarna räknar det som visas (vald dag eller alla)
+    const flikar = VL.urval ? VL.urval.galleriFlikar(synliga, mediaFlik, k => { mediaFlik = k; rita(); }) : null;
     if (!flikar) mediaFlik = 'alla';   // t.ex. efter att alla filmer tagits bort
     if (flikar) kropp.append(flikar);
     (valdDag ? [valdDag] : dagar).forEach(k => {

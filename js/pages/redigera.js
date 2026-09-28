@@ -34,7 +34,7 @@
   async function kategoriDialog() {
     const m = VL.minneSida.data;
     const val = kategoriVal(VL.minneSida.kategorier, (m.memory_categories || []).map(c => c.slug));
-    VL.openDialog(VL.t('meny.kategorier'), val.node, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.setCategories(m.id, val.valda()); VL.notis && VL.notis.skicka('andrat', m); await ladda(); } });
+    VL.openDialog(VL.t('meny.kategorier'), val.node, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.setCategories(m.id, val.valda()); VL.notis && await VL.notis.skicka('andrat', m); await ladda(); } });
   }
 
   function framsteg() { const bar = el('i'); const text = el('p', { class: 'dampad' }); return { node: el('div', {}, el('div', { class: 'framsteg' }, bar), text), set: (i, n, t) => { bar.style.width = Math.round(100 * i / Math.max(1, n)) + '%'; text.textContent = t; } }; }
@@ -59,15 +59,17 @@
       falt('red.textpos', el('div', {}, valRad('textX', ['vanster', 'mitten', 'hoger'], null, v => VL.t('red.pos.' + v)), valRad('textY', ['topp', 'mitt', 'botten'], null, v => VL.t('red.pos.' + v)))),
       falt('red.fokus', el('div', {}, fx, fy)));
     uppd();
-    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); VL.notis && VL.notis.skicka('text', { ...m, title: titel.value.trim() }); await ladda(); } });
+    VL.openDialog(VL.t('meny.redigera'), body, { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateMemory(m.id, { title: titel.value.trim(), place: platsFalt.value.trim(), story: story.value, style: VL.style.normalizeStyle(s) }); VL.notis && await VL.notis.skicka('text', { ...m, title: titel.value.trim() }); await ladda(); } });
   }
 
   // Rutan "Bilder": filmer märks ▶ + längd, ljud ♪. Tryck = välj omslag; "Välj flera" = markera och ta bort många på en gång.
   function bildDialog() {
+    if (!VL.urval) { (VL.laddaOm || (() => location.reload()))(); return; }   // sidan är från före publiceringen: hämta nya
     const m = VL.minneSida.data, u = VL.minneSida.urls;
     const valda = new Set();
     let valjer = false;
     const tryck = x => async () => {
+      if (tarBort) return;
       if (valjer) { if (valda.has(x.id)) valda.delete(x.id); else valda.add(x.id); uppd(); return; }
       await VL.api.setCover(m.id, x.id); await ladda(); d.close();
     };
@@ -76,17 +78,23 @@
         : el('div', { class: 'tumme__tom', text: '♪', onclick: tryck(x) }),
       VL.urval.marke(x) ? el('span', { class: 'tumme__typ', text: VL.urval.marke(x) }) : null,
       el('span', { class: 'tumme__bock', text: '✓', 'aria-hidden': 'true' }),
-      el('button', { type: 'button', class: 'tumme__bort', text: '×', 'aria-label': VL.t('red.ta_bort_bild'), onclick: async () => { if (await VL.confirmDialog(VL.t('red.ta_bort_bild') + '?')) { await VL.api.removeMedia(x); VL.notis && VL.notis.skicka('bort', m, 1); await ladda(); d.close(); } } }),
+      el('button', { type: 'button', class: 'tumme__bort', text: '×', 'aria-label': VL.t('red.ta_bort_bild'), onclick: async () => { if (await VL.confirmDialog(VL.t('red.ta_bort_bild') + '?')) { await VL.api.removeMedia(x); VL.notis && await VL.notis.skicka('bort', m, 1); await ladda(); d.close(); } } }),
       el('button', { type: 'button', class: 'tumme__par', text: '♥', title: VL.t('meny.parbild'), onclick: async () => { await VL.api.updateSettings({ couple_path: x.thumb_path }); VL.toast(VL.t('admin.sparat')); } }));
     const tummar = el('div', { class: 'tummar' }, m.media.map(tumme));
     const valjKnapp = el('button', { type: 'button', class: 'knapp knapp--sekundar', text: VL.t('urval.valj'), onclick: () => { valjer = !valjer; if (!valjer) valda.clear(); uppd(); } });
-    const snabb = k => el('button', { type: 'button', class: 'lank', text: VL.t('urval.' + k), onclick: () => { valda.clear(); if (k !== 'ingen') VL.urval.valj(m.media, k).forEach(id => valda.add(id)); uppd(); } });
+    const snabb = k => el('button', { type: 'button', class: 'lank', text: VL.t('urval.' + k), onclick: () => { if (tarBort) return; valda.clear(); if (k !== 'ingen') VL.urval.valj(m.media, k).forEach(id => valda.add(id)); uppd(); } });
+    let tarBort = false;   // medan borttagningen pågår går inget att ändra (annars dubbla borttagningar och notiser)
     const bortKnapp = el('button', { type: 'button', class: 'knapp fara', onclick: async () => {
       const rader = m.media.filter(x => valda.has(x.id));
-      if (!rader.length || !(await VL.confirmDialog(VL.t('urval.fraga', { vad: VL.urval.beskriv(rader) })))) return;
-      bortKnapp.disabled = true;
-      try { await VL.api.removeMediaMany(rader); VL.notis && VL.notis.skicka('bort', m, rader.length); await ladda(); d.close(); }
-      catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); bortKnapp.disabled = false; }
+      if (tarBort || !rader.length || !(await VL.confirmDialog(VL.t('urval.fraga', { vad: VL.urval.beskriv(rader) })))) return;
+      tarBort = true; uppd();
+      try { await VL.api.removeMediaMany(rader); VL.notis && await VL.notis.skicka('bort', m, rader.length); await ladda(); d.close(); }
+      catch (e) {
+        const n = e.borttagna || 0;
+        if (n && VL.notis) await VL.notis.skicka('bort', m, n);
+        await ladda().catch(() => {}); d.close();   // visa hur det faktiskt ser ut nu
+        VL.toast(n ? VL.t('urval.delvis', { n, av: rader.length }) : (e.message || VL.t('fel.allmant')), 'fel');
+      }
     } });
     const valRad = el('div', { class: 'urval-rad' }, el('small', { class: 'dampad', text: VL.t('urval.tips') }),
       el('div', { class: 'urval-snabb' }, snabb('alla'), snabb('filmer'), snabb('bilder'), snabb('ingen')), bortKnapp);
@@ -96,13 +104,13 @@
       valjKnapp.textContent = VL.t(valjer ? 'urval.klar' : 'urval.valj');
       valRad.hidden = !valjer;
       bortKnapp.textContent = VL.t('urval.ta_bort', { n: valda.size });
-      bortKnapp.disabled = !valda.size;
+      bortKnapp.disabled = tarBort || !valda.size;
     }
     uppd();
     const filer = el('input', { type: 'file', multiple: true, accept: 'image/*,video/mp4,video/quicktime,audio/mpeg,audio/mp4,.mp3,.m4a' });
     const fs = framsteg();
     const topp = el('div', { class: 'urval-topp' }, el('span', { class: 'dampad', text: VL.urval.sammanfattning(m.media) }), m.media.length ? valjKnapp : null);
-    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, topp, valRad, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
+    const d = VL.openDialog(VL.t('meny.bilder'), el('div', {}, topp, valRad, tummar, falt('red.valj_filer', filer), fs.node), { okText: VL.t('red.spara'), onOk: async () => { if (filer.files.length) { await laddaUpp(m, [...filer.files], fs.set); VL.notis && await VL.notis.skicka('bilder', m, filer.files.length); } await ladda(); } });
   }
 
   function datumDialog() {
@@ -129,7 +137,7 @@
       // bildernas dagar följer med (annars försvinner de ur galleriet och kalendern)
       for (const x of m.media) { const d = D.remapDay(x.day, m.start_date, ny.start, ny.slut); if (d !== x.day) await VL.api.setMediaDay(x.id, d); }
       if (valda.size) await VL.api.mergeInto(m, [...valda].map(id => ({ id })));
-      VL.notis && VL.notis.skicka('datum', m);
+      VL.notis && await VL.notis.skicka('datum', m);
       await ladda(); } });
   }
 
@@ -140,7 +148,7 @@
     VL.openDialog(VL.t('meny.lank'), el('div', {}, lista, falt('red.lank', inp)), { okText: VL.t('red.spara'), onOk: async () => {
       if (!inp.value.trim()) return;
       const p = VL.links.parseLink(inp.value); if (!p) { VL.toast(VL.t('red.lank_ogiltig'), 'fel'); return false; }
-      await VL.api.addLink(m.id, p, m.links.length); VL.notis && VL.notis.skicka('andrat', m); await ladda(); } });
+      await VL.api.addLink(m.id, p, m.links.length); VL.notis && await VL.notis.skicka('andrat', m); await ladda(); } });
   }
 
   function synlighetDialog() {
