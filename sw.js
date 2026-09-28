@@ -3,9 +3,11 @@
 const CACHE = 'emma-och-jock-v1';
 // Frågar servern varje gång (svar 304 om filen är oförändrad) i stället för webbläsarens HTTP-cache,
 // som annars kan ge gamla – eller en blandning av gamla och nya – filer i upp till 10 minuter.
-// En sidladdning (mode navigate) går inte att kopiera med nya inställningar, så där återanvänds bara adressen.
+// En sidladdning (mode navigate) går inte att kopiera med nya inställningar, så där återanvänds bara adressen –
+// med redirect 'manual' som webbläsaren själv använder: en omdirigerad sidladdning (t.ex. när adressen flyttas till
+// vlog.donkeystories.com) blir annars ett nätverksfel och den installerade appen öppnas aldrig mer.
 function farsk(req) {
-  return req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : new Request(req, { cache: 'no-cache' });
+  return req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: 'manual' }) : new Request(req, { cache: 'no-cache' });
 }
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(
