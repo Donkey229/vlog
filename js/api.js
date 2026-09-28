@@ -4,7 +4,7 @@
   VL.sb = sb;
   const must = ({ data, error }) => { if (error) throw error; return data; };
   const uuid = () => crypto.randomUUID();
-  const HEAD = 'id,title,kind,start_date,end_date,visibility,cover_media_id,created_by,place';
+  const HEAD = 'id,title,kind,start_date,end_date,visibility,cover_media_id,created_by,updated_by,place';
   const CATS = 'memory_categories(slug)';
   const byStart = (a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0);
 
