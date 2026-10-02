@@ -12,7 +12,7 @@ function farsk(req) {
 // Push-notis → vad som visas. Öppnar bara vloggens egna sidor (inget annat går att smyga in via notisen).
 // En reaktion (❤️ …) har avsändarens namn som rubrik och öppnar hjärtats ruta (index.html#hjarta).
 function notisVisning(d) {
-  const url = /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html(#hjarta)?)$/.test((d && d.url) || '') ? d.url : 'index.html';
+  const url = /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html(#hjarta)?|spel\.html(\?paket=[a-z0-9-]{1,60})?)$/.test((d && d.url) || '') ? d.url : 'index.html';
   const title = Array.from(String((d && d.title) || '').trim()).slice(0, 40).join('') || 'Emma & Jock';
   const tag = d && d.tag === 'reaktion' ? 'reaktion' : url;
   return { title, options: { body: String((d && d.text) || '').slice(0, 140), icon: 'img/app-192.png', badge: 'img/app-192.png', tag, renotify: true, data: { url } } };
