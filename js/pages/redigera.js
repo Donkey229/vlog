@@ -1,4 +1,6 @@
 // All redigering: menyn "⋯", stil/text, bilder, datum, länkar, synlighet, borttagning, nytt minne.
+// Omdesignen 2026-10 (paket e): minnessidan öppnar Ändra minne (andra.js) i stället för ⋯-menyn. Ändra använder härifrån
+// bildvyn, datumväljaren i "välj"-läge (sparar inget själv), länkrutan, ihopslagningen och borttagningen av hela minnet.
 (function (VL) {
   const el = VL.el, D = VL.dates;
   const ladda = async () => { await VL.minneSida.ladda(); VL.minneSida.rita(); };
@@ -168,7 +170,32 @@
   // den visar de gamla datumen). Andra fel går vidare som förut.
   async function omAndrat(e) { if (!e || !e.andrat) throw e; VL.toast(e.message, 'fel'); await ladda().catch(() => {}); }
 
-  function datumDialog() {
+  // Välj-läget (Ändra minne): bara datumen väljs – inget sparas här. onVal({ start_date, end_date }) med slut = null för en dag;
+  // Ändra sparar först när man trycker Spara (och då i ett steg med bildernas dagar).
+  function datumVal({ nu, onVal }) {
+    const { data: m, huvuden = [] } = VL.minneSida || {};
+    const s0 = nu.start_date, s1 = nu.end_date || nu.start_date;
+    const start = el('input', { type: 'date', value: s0, required: true }), slut = el('input', { type: 'date', value: s1, min: s0 });
+    kopplaSlut(start, slut);
+    const finns = el('p', { class: 'nytt__samma datum__finns', hidden: true });
+    const overlappar = (h, a, b) => h.start_date <= b && (h.end_date || h.start_date) >= a;
+    const ritaFinns = () => {
+      const a = start.value, b = slut.value || start.value;
+      const nya = m ? huvuden.filter(h => h.id !== m.id && overlappar(h, a, b) && !overlappar(h, m.start_date, m.end_date || m.start_date)) : [];
+      finns.hidden = !nya.length;
+      finns.textContent = nya.length ? VL.t('red.datum_finns', { minnen: nya.map(h => '”' + (h.title || D.formatRange(h.start_date, h.end_date)) + '”').join(VL.t('urval.och')) }) : '';
+    };
+    start.addEventListener('change', ritaFinns); slut.addEventListener('change', ritaFinns); ritaFinns();
+    return VL.openDialog(VL.t('meny.datum'), el('div', {}, falt('red.start', start), falt('red.slut', slut), finns,
+      el('small', { class: 'dampad', text: VL.t('andra.sparas_forst') })), { okText: VL.t('andra.klar'), onOk: () => {
+      if (!start.value) { VL.toast(VL.t('red.start'), 'fel'); return false; }
+      if (slut.value && slut.value < start.value) { VL.toast(VL.t('red.slut'), 'fel'); return false; }
+      onVal({ start_date: start.value, end_date: slut.value && slut.value !== start.value ? slut.value : null });
+    } });
+  }
+
+  function datumDialog(val) {
+    if (val && typeof val.onVal === 'function') return datumVal(val);
     const { data: m, huvuden, prof } = VL.minneSida;
     const typ = el('select', {}, ['dag', 'resa', 'utflykt'].map(k => el('option', { value: k, selected: m.kind === k, text: VL.t('typ.' + k) })));
     // slutdatum förifyllt med start (en dag) och min = start: då öppnar väljaren på rätt månad i stället för i dag
@@ -300,6 +327,36 @@
       || nya(sett.comments, farsk.comments) || nya(sett.links, farsk.links);
   }
 
+  // Ta bort hela minnet (⋯-menyn och "Ta bort minnet …" i Ändra minne): färsk lista först, aldrig någon annans bilder
+  // (sql/19), en sista koll precis före borttagningen – och databasen säger själv nej om fler bilder kommit till (sql/23).
+  async function taBortMinne() {
+    const m = VL.minneSida.data;
+    // Har minnet någon annans bilder får en redaktör inte ta bort det (sql/19) – säg det innan något frågas eller tas bort.
+    if (!VL.text.andrasFiler) { (VL.laddaOm || (() => location.reload()))(); return; }   // halvgammal sida: inget tas bort, hämta nya
+    // Färsk lista först: bilder som kommit till efter att sidan öppnades (t.ex. den andras, samma datum) ska synas innan
+    // något tas bort – och databasen får just den listan (ta_bort_minne säger nej om fler har kommit till under tiden).
+    let farsk;
+    try { farsk = await VL.api.memory(m.id); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); return; }
+    if (!farsk) { VL.toast(VL.t('minne.saknas'), 'fel'); return; }
+    farsk.media = farsk.media || [];
+    if (farsk.media.some(x => !m.media.some(y => y.id === x.id))) { await ladda().catch(() => {}); VL.toast(VL.t('bort.nya_bilder'), 'fel'); return; }
+    // text, kommentarer och länkar som kommit till efter att sidan öppnades: visa dem först (databasen kollar bara bilderna)
+    const visaAndrat = async () => { await ladda().catch(() => {}); VL.toast(VL.t('bort.andrat'), 'fel'); };
+    if (andratSedan(m, farsk)) { await visaAndrat(); return; }
+    const andra = VL.text.andrasFiler(VL.minneSida.prof, farsk);
+    if (andra.length) { ejBortBesked(farsk, andra); return; }
+    // frågan säger hur många av bilderna den andra lagt upp (admin får ta bort allas – men ska veta det)
+    const fraga = [VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) }), andrasDel(farsk.media)].filter(Boolean).join(' ');
+    if (!(await VL.confirmDialog(fraga))) return;
+    // frågan kan ha stått öppen länge: en sista koll precis före borttagningen (nya bilder stoppar databasen själv)
+    let sist;
+    try { sist = await VL.api.memory(m.id); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); return; }
+    if (!sist) { VL.toast(VL.t('minne.saknas'), 'fel'); return; }
+    if (andratSedan(farsk, sist)) { await visaAndrat(); return; }
+    try { await VL.api.deleteMemory(farsk); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); }
+    catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); await ladda().catch(() => {}); }   // visa hur det faktiskt ser ut nu
+  }
+
   function oppnaMeny(knapp) {
     const gammal = document.querySelector('.meny'); if (gammal) { gammal.remove(); return; }
     const m = VL.minneSida.data;
@@ -309,32 +366,7 @@
       rad('meny.kopiera', async () => { try { const k = await VL.api.duplicateMemory(m); location.href = 'minne.html?id=' + k.id; } catch (e) { VL.toast(e.message, 'fel'); } }),
       el('hr'),
       rad('meny.ta_bort_text', async () => { if (await VL.confirmDialog(VL.t('meny.bekrafta_text'))) { await VL.api.updateMemory(m.id, { story: '' }); await ladda(); } }, true),
-      !VL.text.kanTaBort(VL.minneSida.prof, m) ? null : rad('meny.ta_bort_minne', async () => {
-        // Har minnet någon annans bilder får en redaktör inte ta bort det (sql/19) – säg det innan något frågas eller tas bort.
-        if (!VL.text.andrasFiler) { (VL.laddaOm || (() => location.reload()))(); return; }   // halvgammal sida: inget tas bort, hämta nya
-        // Färsk lista först: bilder som kommit till efter att sidan öppnades (t.ex. den andras, samma datum) ska synas innan
-        // något tas bort – och databasen får just den listan (ta_bort_minne säger nej om fler har kommit till under tiden).
-        let farsk;
-        try { farsk = await VL.api.memory(m.id); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); return; }
-        if (!farsk) { VL.toast(VL.t('minne.saknas'), 'fel'); return; }
-        farsk.media = farsk.media || [];
-        if (farsk.media.some(x => !m.media.some(y => y.id === x.id))) { await ladda().catch(() => {}); VL.toast(VL.t('bort.nya_bilder'), 'fel'); return; }
-        // text, kommentarer och länkar som kommit till efter att sidan öppnades: visa dem först (databasen kollar bara bilderna)
-        const visaAndrat = async () => { await ladda().catch(() => {}); VL.toast(VL.t('bort.andrat'), 'fel'); };
-        if (andratSedan(m, farsk)) { await visaAndrat(); return; }
-        const andra = VL.text.andrasFiler(VL.minneSida.prof, farsk);
-        if (andra.length) { ejBortBesked(farsk, andra); return; }
-        // frågan säger hur många av bilderna den andra lagt upp (admin får ta bort allas – men ska veta det)
-        const fraga = [VL.t('meny.bekrafta_minne', { titel: m.title || D.formatRange(m.start_date, m.end_date) }), andrasDel(farsk.media)].filter(Boolean).join(' ');
-        if (!(await VL.confirmDialog(fraga))) return;
-        // frågan kan ha stått öppen länge: en sista koll precis före borttagningen (nya bilder stoppar databasen själv)
-        let sist;
-        try { sist = await VL.api.memory(m.id); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); return; }
-        if (!sist) { VL.toast(VL.t('minne.saknas'), 'fel'); return; }
-        if (andratSedan(farsk, sist)) { await visaAndrat(); return; }
-        try { await VL.api.deleteMemory(farsk); location.href = 'index.html?vy=kalender&man=' + m.start_date.slice(0, 7); }
-        catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); await ladda().catch(() => {}); }   // visa hur det faktiskt ser ut nu
-      }, true));
+      !VL.text.kanTaBort(VL.minneSida.prof, m) ? null : rad('meny.ta_bort_minne', taBortMinne, true));
     knapp.parentNode.append(meny);
     meny.querySelector('button').focus();
     const bort = e => { if (!meny.contains(e.target) && e.target !== knapp) { meny.remove(); document.removeEventListener('click', bort, true); } };
@@ -451,5 +483,5 @@
     kollaSamma();
   }
 
-  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp, bildDialog, ihopDialog, datumDialog };
+  VL.redigera = { oppnaMeny, nyttMinne, laddaUpp, bildDialog, ihopDialog, datumDialog, lankDialog, taBortMinne };
 })(window.VL);

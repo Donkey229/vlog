@@ -550,16 +550,40 @@
   // En tabell som inte finns än (t.ex. sql/22 inte körd) blir en tom lista; andra fel stoppar kopian – den ska aldrig tyst sakna något.
   const finnsInte = e => /42P01|PGRST205|does not exist|could not find the table/i.test(String((e && e.code) || '') + ' ' + String((e && e.message) || ''));
   const valfri = p => p.catch(e => { if (finnsInte(e)) return []; throw e; });
+  // Intima svar (omdesignen 2026-10-02, S10): svaren i 18+-paketen i Frågor & spel och i Dagens frågor (paket dag-…) är INTE med
+  // i data.json. Kryssrutan "Ta med intima svar" (av som standard) lägger dem i en egen fil, intimt.json, med en varning om att
+  // filen inte är krypterad. Svaren på Dagens frågor och träffens frågor (egna tabeller i sql/27) läses aldrig här.
+  // Vilka paket som är 18+ står i frågedatan (js/spel/*.js), som adminsidan annars inte laddar – den hämtas först. Går den inte
+  // att läsa räknar VL.api.arIntimtPaket allt som intimt (hellre i den egna filen än i data.json).
+  // kryssrutan är en 44 px hög tryckyta (rutan ritas ändå som en vanlig kvadrat mitt i)
+  const intimKryss = el('input', { type: 'checkbox', id: 'kopia-intimt', style: { width: '24px', height: '44px', margin: '0', flex: 'none', accentColor: 'var(--rose)' } });
+  const intimRad = el('label', { for: 'kopia-intimt', class: 'admin-kryss', style: { display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px', cursor: 'pointer' } },
+    intimKryss, el('span', { text: VL.t('admin.intim_med') }));
+  const intimVarning = el('p', { class: 'admin-hjalp', text: VL.t('admin.intim_varning') });
+  const arIntimt = p => (VL.api.arIntimtPaket ? VL.api.arIntimtPaket(p) : /^dag-/.test(String(p || '')));
+  let spelDataLaddad = null;
+  const laddaSpelData = () => spelDataLaddad || (spelDataLaddad = (async () => {
+    if (VL.spelData && Array.isArray(VL.spelData.kategorier) && VL.spelData.kategorier.length) return;
+    for (const src of ['js/spel/fragor_a.js', 'js/spel/fragor_b.js']) {
+      await new Promise(klar => { const sk = document.createElement('script'); sk.src = src; sk.onload = klar; sk.onerror = klar; document.head.append(sk); });
+    }
+  })());
+  const intimFil = rader => JSON.stringify({ varning: VL.t('admin.intim_varning'), exporterad: new Date().toISOString(), spel_svar: rader }, null, 2);
   async function dataJson() {
     const huvuden = await VL.api.headers(), minnen = [];
     for (const h of huvuden) { const m = await VL.api.memory(h.id); if (m) minnen.push(m); }   // borttaget under tiden: inte med
     const [om, kategorier, profiler, traffar, reaktioner, spelSvar, bakgrund] = await Promise.all([VL.api.about(), VL.api.categories(),
       K.lasAlla('profiles', 'id,display_name,role,lang,avatar_path'), VL.api.traffar(), K.lasAlla('reaktioner', 'id,from_id,to_id,emoji,text,created_at,read_at'),
       valfri(K.lasAlla('spel_svar', 'user_id,paket,fraga,svar,gissning,skapad,andrad', { ordning: ['paket', 'fraga', 'user_id'] })),
-      valfri(K.lasAlla('hjarta_bakgrund', 'user_id,path', { ordning: 'user_id' }))]);
-    return { exporterad: new Date().toISOString(), settings: s, about: om, categories: kategorier, profiles: profiler, memories: minnen, traffar, reaktioner,
-      spel_svar: spelSvar, hjarta_bakgrund: bakgrund };
+      valfri(K.lasAlla('hjarta_bakgrund', 'user_id,path', { ordning: 'user_id' })), laddaSpelData()]);
+    const data = { exporterad: new Date().toISOString(), settings: s, about: om, categories: kategorier, profiles: profiler, memories: minnen, traffar, reaktioner,
+      spel_svar: spelSvar.filter(r => !arIntimt(r.paket)), hjarta_bakgrund: bakgrund };
+    // de intima svaren följer med samma läsning men syns inte i JSON.stringify (icke uppräkningsbar)
+    Object.defineProperty(data, 'intimt', { value: spelSvar.filter(r => arIntimt(r.paket)), enumerable: false });
+    return data;
   }
+  // Raden under knapparna när intima svar finns men kryssrutan är av: inget försvinner tyst ur kopian.
+  const intimUtan = data => (!intimKryss.checked && data.intimt.length ? ' ' + VL.tn('admin.intim_utan', data.intimt.length) : '');
   // Knappen är avstängd, sidan varnar vid sidbyte och skärmen hålls vaken medan något sparas.
   async function upptagen(knapp, fn) {
     knapp.disabled = true; VL.upptagen = (VL.upptagen || 0) + 1;
@@ -569,8 +593,10 @@
   }
   const sparaTexter = el('button', { type: 'button', class: 'knapp knapp--sekundar', text: VL.t('admin.spara_texter'), onclick: () => upptagen(sparaTexter, async () => {
     kopiaStatus.textContent = VL.t('admin.hamtar');
-    K.ladda(new Blob([JSON.stringify(await dataJson(), null, 2)], { type: 'application/json' }), 'emma-och-jock-texter-' + D.todayKey() + '.json');
-    kopiaStatus.textContent = VL.t('red.klart');
+    const data = await dataJson();
+    K.ladda(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'emma-och-jock-texter-' + D.todayKey() + '.json');
+    if (intimKryss.checked && data.intimt.length) K.ladda(new Blob([intimFil(data.intimt)], { type: 'application/json' }), 'emma-och-jock-intimt-' + D.todayKey() + '.json');
+    kopiaStatus.textContent = VL.t('red.klart') + intimUtan(data);
   }) });
 
   let delar = null, plan = null, nastaDel = 0, saknasTotalt = 0;
@@ -604,6 +630,7 @@
     const delen = delar[i], zip = new JSZip(), saknas = [], vagar = delen.filer.map(f => f.path);
     kopiaFramsteg.hidden = false; kopiaBar.style.width = '0%';
     if (i === 0) zip.file('data.json', JSON.stringify(plan.data, null, 2));   // första filen har också texterna – samma läsning som planen
+    if (i === 0 && intimKryss.checked && plan.data.intimt.length) zip.file('intimt.json', intimFil(plan.data.intimt));   // bara med kryssrutan
     for (let j = 0; j < vagar.length; j += 5) {   // signera strax före hämtningen, 5 i taget, giltiga en timme (filmer på mobilnät tar tid)
       const omg = vagar.slice(j, j + 5), urls = await VL.api.signedUrls(omg, 3600);
       for (const [k, p] of omg.entries()) {
@@ -636,7 +663,7 @@
   visaKopiaDatum();   // enhetens eget datum tills adminläget är läst – sedan databasens, och påminnelsen
   hamtaLage().then(() => { visaKopiaDatum(); ritaKopiaPaminnelse(); });
   main.append(fall('kopia', VL.t('admin.kopia'), kopiaLage, el('p', { class: 'admin-hjalp', text: VL.t('admin.kopia_text') }), kopiaSenast,
-    el('div', { class: 'admin-knappar' }, sparaTexter, sparaFiler), kopiaPlan, kopiaFramsteg, kopiaStatus));
+    intimRad, intimVarning, el('div', { class: 'admin-knappar' }, sparaTexter, sparaFiler), kopiaPlan, kopiaFramsteg, kopiaStatus));
 
   // varje del fyller sig själv; ett fel i en del syns i just den delen
   await Promise.allSettled([ritaVantar(), ritaFynd(), ritaPersoner(), ritaLagring(), ritaKat(), ritaLogg()]);

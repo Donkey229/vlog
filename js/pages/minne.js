@@ -1,8 +1,12 @@
 // Ett inlägg på hela sidan: stor bild, författare, lästid, kategorier, dagflikar, berättelse, bilder, filmer,
 // ljud, länkar, gilla, kommentarer (godkänns innan de syns), "Kolla också…" och nästa/föregående.
+// Omdesignen 2026-10 (paket e, spec §6.3): fotot visar alltid typ, rubrik, datum och plats; ⋯-menyn är ersatt av EN knapp
+// "✎ Ändra" (Jock och Emma) som öppnar Ändra minne (andra.js). minne.html?id=…&andra=plats öppnar Ändra med platsbladet uppe.
 (async function (VL) {
   const D = VL.dates, el = VL.el;
   const prof = await VL.guard({ allowAnon: true });
+  // utloggad på den här telefonen: utkast från Ändra minne ska inte ligga kvar (spec S14)
+  if (!prof && VL.andra) VL.andra.rensaUtkast();
   VL.applyI18n();
   await VL.renderHeader(prof, 'minne');
   const main = document.getElementById('innehall');
@@ -60,29 +64,56 @@
     forsokt.add(e); fornya();
   }, true);
 
+  // korta datum med år ("6–7 sep 2026") – samma format som tidslinjen
+  function kortDatum(a, b) {
+    const th = VL.lang && VL.lang() === 'th';
+    const f = (d, o) => { const t = new Intl.DateTimeFormat(VL.locale(), o).format(D.parseDay(d)); return th ? t : t.replace(/\.(?=\s|$)/g, ''); };
+    const o = { day: 'numeric', month: 'short', year: 'numeric' };
+    if (!b || b === a) return f(a, o);
+    if (a.slice(0, 7) === b.slice(0, 7)) return D.parseDay(a).getDate() + '–' + f(b, o);
+    return f(a, a.slice(0, 4) === b.slice(0, 4) ? { day: 'numeric', month: 'short' } : o) + ' – ' + f(b, o);
+  }
+  const ikon = (namn, storlek = 18) => (VL.ikon ? VL.ikon(namn, { storlek }) : null);
+  // Tillbaka: till sidan man kom från (Hem, vägen, listan, kalendern) om den är vår egen – annars månaden i kalendern.
+  function tillbaka(ev) {
+    try {
+      const fran = document.referrer ? new URL(document.referrer) : null;
+      if (fran && fran.origin === location.origin && !/minne\.html$/.test(fran.pathname) && history.length > 1) { ev.preventDefault(); history.back(); }
+    } catch (e) { /* vanlig länk */ }
+  }
+
   function hjalte() {
-    const { data, urls, personer, kanRedigera } = VL.minneSida;
+    const { data, urls, kanRedigera } = VL.minneSida;
     const bilder = data.media.filter(visuell);
     const omslag = bilder.find(m => m.id === data.cover_media_id) || bilder.find(m => m.kind === 'photo') || bilder[0];
     const bild = omslag ? urls[omslag.kind === 'video' ? omslag.poster_path : omslag.path] : null;
-    const nFoto = data.media.filter(m => m.kind === 'photo').length, nFilm = data.media.filter(m => m.kind === 'video').length;
     const dagar = D.rangeDays(data.start_date, data.end_date).length;
     const s = VL.style.normalizeStyle(data.style);
-    const forf = personer[VL.text.skribent(data)];   // den som senast ändrade
-    const h = el('section', { class: 'hjalte' },
+    const syn = { public: 'jorden', guests: 'gaster' }[data.visibility];
+    return el('section', { class: 'hjalte andra-hjalte' },
       bild ? el('img', { src: bild, alt: '', style: { objectPosition: s.focusX + '% ' + s.focusY + '%' } }) : null,
-      el('a', { class: 'hjalte__tillbaka', href: 'index.html?vy=kalender&man=' + data.start_date.slice(0, 7), text: VL.t('minne.tillbaka') }),
-      el('div', { class: 'hjalte__text' },
-        el('small', { text: (VL.t('typ.' + data.kind) + (dagar > 1 ? ' · ' + VL.t('minne.dagar', { n: dagar }) : '')).toUpperCase() }),
+      el('div', { class: 'andra-hjalte__knappar' },
+        el('a', { class: 'andra-glasrund', href: 'index.html?vy=kalender&man=' + data.start_date.slice(0, 7), 'aria-label': VL.t('minne.tillbaka').replace(/^‹\s*/, ''), onclick: tillbaka }, ikon('tillbaka', 22)),
+        // ⋯-menyn är borta: EN knapp öppnar Ändra minne där allt går att ändra (bara Jock och Emma)
+        kanRedigera ? el('button', { type: 'button', class: 'andra-glaspiller', onclick: () => VL.andra && VL.andra.oppna(VL.minneSida.data) },
+          ikon('penna'), el('span', { text: VL.t('andra.knapp') })) : null),
+      el('div', { class: 'hjalte__text andra-hjalte__text' },
+        el('span', { class: 'andra-typchip', text: (VL.t('typ.' + data.kind) + (dagar > 1 ? ' · ' + VL.t('minne.dagar', { n: dagar }) : '')).toUpperCase() }),
         el('h1', { text: data.title || D.formatRange(data.start_date, data.end_date) }),
-        data.place ? el('a', { class: 'hjalte__plats', href: 'index.html?vy=tidslinje&plats=' + encodeURIComponent(data.place), text: '📍 ' + data.place }) : null,
-        el('p', {}, [D.formatRange(data.start_date, data.end_date),
-          forf ? VL.t('minne.skrivet_av', { namn: forf.display_name }) : null,
-          data.story ? VL.t('minne.lastid', { n: VL.text.readingMinutes(data.story) }) : null,
-          nFoto ? VL.tn('minne.bilder', nFoto) : null, nFilm ? VL.tn('minne.filmer', nFilm) : null].filter(Boolean).join(' · '),
-          el('span', { class: 'chip', text: VL.t('syn.' + data.visibility) }))));
-    if (kanRedigera) h.append(el('button', { class: 'prickar', type: 'button', 'aria-haspopup': 'menu', 'aria-label': VL.t('nav.meny'), text: '⋯', onclick: ev => VL.redigera && VL.redigera.oppnaMeny(ev.currentTarget) }));
-    return h;
+        el('p', { class: 'andra-meta' },
+          el('span', { class: 'andra-meta__del' }, ikon('kalender', 16), el('span', { text: kortDatum(data.start_date, data.end_date) })),
+          data.place ? el('a', { class: 'andra-meta__del hjalte__plats', href: 'index.html?vy=tidslinje&plats=' + encodeURIComponent(data.place) }, ikon('plats', 16), el('span', { text: data.place })) : null,
+          syn ? el('span', { class: 'andra-meta__del' }, ikon(syn, 16), el('span', { text: VL.t('tid.syn_' + data.visibility) })) : null)));
+  }
+  // "Skrivet av Emma · ändrat 2 okt" – den som senast ändrade och när
+  function byline() {
+    const { data, personer } = VL.minneSida;
+    const forf = personer[VL.text.skribent(data)];
+    const nar = data.updated_at || data.created_at;
+    const dag = nar ? new Intl.DateTimeFormat(VL.locale(), { day: 'numeric', month: 'short' }).format(new Date(nar)) : '';
+    const andrat = dag ? VL.t('andra.andrat', { datum: VL.lang && VL.lang() === 'th' ? dag : dag.replace(/\.(?=\s|$)/g, '') }) : '';
+    const text = [forf ? VL.t('andra.skrivet', { namn: forf.display_name }) : null, andrat || null].filter(Boolean).join(' · ');
+    return text ? el('p', { class: 'andra-byline', text }) : null;
   }
 
   const ljusbord = (lista, start) => VL.ljusbord(lista, start, () => VL.minneSida.urls);
@@ -155,14 +186,13 @@
         el('button', { type: 'button', class: 'bildspel__fore', 'aria-label': VL.t('red.bildspel_fore'), text: '‹', onclick: () => steg(-1) }),
         el('button', { type: 'button', class: 'bildspel__nasta', 'aria-label': VL.t('red.bildspel_nasta'), text: '›', onclick: () => steg(1) }));
     }
-    const forfattare = personer[VL.text.skribent(data)];   // den som senast ändrade
     const block = el('div', { class: 'block' },
       el('div', { class: 'block__bild' }, bildDel),
       el('div', { class: 'block__text' }, data.title ? el('h2', { class: 'block__titel', 'data-roll': 'titel', text: data.title }) : null,
-        data.story ? el('p', { class: 'block__berattelse', 'data-roll': 'text', text: data.story }) : null,
-        data.story && forfattare ? el('span', { class: 'av-rad', text: VL.t('minne.skrivet_av', { namn: forfattare.display_name }) }) : null));
+        data.story ? el('p', { class: 'block__berattelse', 'data-roll': 'text', text: data.story }) : null));
     VL.style.applyStyle(block, s);
     if (data.story || data.title) kropp.append(block);
+    VL.add(kropp, byline());
     // ljud
     const ljud = data.media.filter(m => m.kind === 'audio');
     if (ljud.length) kropp.append(el('div', { class: 'ljudlista' }, ljud.map(a => el('figure', {}, el('figcaption', { text: '♪ ' + (a.caption || VL.t('minne.ljud')) }), el('audio', { controls: true, preload: 'none', src: urls[a.path] })))));
@@ -206,5 +236,13 @@
   if (await ladda()) {
     rita();
     VL.renderMosaic(VL.minneSida.data.media.filter(visuell).map(m => VL.minneSida.urls[m.thumb_path]).filter(Boolean));
+    // "+ Lägg till plats" på tidslinjen: Ändra öppnas direkt med platsbladet uppe. Parametern tas bort ur adressen först,
+    // annars öppnas bladet igen vid Tillbaka eller omladdning.
+    const q = new URLSearchParams(location.search);
+    if (q.get('andra')) {
+      const vad = q.get('andra'); q.delete('andra');
+      history.replaceState(null, '', location.pathname.split('/').pop() + '?' + q + location.hash);
+      if (VL.minneSida.kanRedigera && VL.andra) VL.andra.oppna(VL.minneSida.data, { fokus: vad === 'plats' ? 'plats' : null });
+    }
   }
 })(window.VL);

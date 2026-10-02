@@ -73,12 +73,34 @@
     };
   }
 
+  // Spelnotisen (omdesignen 2026-10, spec §6.9 och S2): samma neutrala text "{namn} har svarat – din tur" på sv, en och th,
+  // oavsett paket – paketets titel står aldrig på låsskärmen (servern i paket b byter också ut texten). Kastar aldrig och har en
+  // tidsgräns: en notis får aldrig stoppa svaret, men ett fel visas för avsändaren.
+  async function spelNotis(typ, o = {}, { api = VL.api, tidsgrans = 4000 } = {}) {
+    const jobb = (async () => {
+      const jag = api && typeof api.me === 'function' ? await api.me() : null;
+      if (!jag || !['admin', 'editor'].includes(jag.role) || typeof api.notis !== 'function') return null;
+      const text = Object.fromEntries(['sv', 'en', 'th'].map(l => [l, VL.t('dagens.notis_din_tur', { namn: jag.display_name || '?' }, l)]));
+      return (await api.notis(text, o.url || 'spel.html')) || null;
+    })();
+    jobb.catch(() => {});
+    const TID = {};
+    try {
+      const r = await Promise.race([jobb, new Promise(res => setTimeout(() => res(TID), tidsgrans))]);
+      return r === TID ? null : r;
+    } catch (e) { console.warn('[spel] notis', e); try { VL.toast(VL.t('notis.fel'), 'fel'); } catch (x) {} return null; }
+  }
+  // Dagens frågor ligger i databasen som paket med id dag-ÅÅÅÅMMDD-m|k (paket b): de visas aldrig i paketlistorna.
+  const utanDagPaket = kat => (kat || []).map(k => ({ ...k, paket: (k.paket || []).filter(p => !(p && /^dag-/.test(p.id))) }));
+
   // Sidan. api/notis/kategorier går att byta ut (testerna, förhandsvisningen); navigera=false ändrar aldrig adressraden.
   // utkast = var halvskrivna svar sparas; intervall = hur ofta svaren hämtas om medan "Väntar på …" syns (ms).
   // Svarar med { stoppa } – tar bort lyssnarna och timern (görs också av sig själv när sidan inte längre finns).
+  // Översikten (omdesignen 2026-10, spec §6.6): I dag (Dagens frågor, större) → Inför träffen (om en träff finns) → Frågor & spel.
   async function starta({ main, prof, api = VL.api, kategorier = S.kategorier(), adress = location.search, navigera = true,
-    notis = (typ, o) => (VL.notis ? VL.notis.skicka(typ, o) : null), utkast = sessionsUtkast(), intervall = 20000 } = {}) {
+    notis = (typ, o) => spelNotis(typ, o, { api }), utkast = sessionsUtkast(), intervall = 20000 } = {}) {
     if (!VL.text.kanRedigera(prof)) { main.replaceChildren(el('p', { class: 'tomlage', text: VL.t('spel.bara_vi') })); return { stoppa: () => {} }; }
+    kategorier = utanDagPaket(kategorier);
     let personer = {};
     try { personer = (await api.profiles()) || {}; } catch (e) { personer = {}; }
     const jag = personer[prof.id] || prof;
@@ -141,8 +163,33 @@
     };
     const tillbaka = href => lank(el('a', { class: 'spel-tillbaka', href, text: VL.t('minne.tillbaka') }));
 
+    // "I dag" och "Inför träffen" byggs en gång och flyttas med när översikten ritas om (ingen ny hämtning, inget blink).
+    // Saknas sql/27 (eller funktionerna i api) syns de inte alls – då är fliken som förut.
+    const idag = el('section', { class: 'dagens-idag', hidden: true }, el('h2', { class: 'k-etikett dagens-sektion', text: VL.t('dagens.i_dag') }), el('div', { class: 'dagens-idag__plats' }));
+    const infor = el('section', { class: 'traffq-flik', hidden: true }, el('h2', { class: 'k-etikett traffq-sektion', text: VL.t('traffq.rubrik') }), el('div', { class: 'traffq-flik__plats' }));
+    let dagensKort = null, inforKort = null;
+    async function fyllIdag() {
+      if (!VL.dagens || typeof VL.dagens.kort !== 'function' || !api || typeof api.dagensIdag !== 'function') return;
+      try { dagensKort = await VL.dagens.kort(idag.lastElementChild, { prof, personer, api, stor: true }); } catch (e) { console.warn('[spel] dagens', e); dagensKort = null; }
+      idag.hidden = !dagensKort;
+    }
+    async function fyllInfor() {
+      if (!VL.traffFragor || typeof VL.traffFragor.kort !== 'function' || !VL.traffar || !api || typeof api.traffar !== 'function' || typeof api.traffStatus !== 'function') return;
+      let traff = null;
+      try { traff = VL.traffar.nasta((await api.traffar()) || [], VL.dates.todayKey()); } catch (e) { traff = null; }
+      if (!traff) return;
+      try { inforKort = await VL.traffFragor.kort(infor.lastElementChild, { traff, prof, personer, api, datumruta: true }); } catch (e) { console.warn('[spel] inför träffen', e); inforKort = null; }
+      infor.hidden = !inforKort;
+    }
+
     function ritaOversikt() {
       vy = statusVy(ritaOversikt);
+      const statusUppdatera = vy.uppdatera;
+      vy.uppdatera = async () => {
+        await statusUppdatera();
+        if (dagensKort && dagensKort.uppdatera) await dagensKort.uppdatera();
+        if (inforKort && inforKort.uppdatera) await inforKort.uppdatera();
+      };
       const rakning = S.raknaFilter(kategorier, lage.karta);
       const falt = el('input', { type: 'search', class: 'spel-sok__falt', maxlength: 60, value: lage.q, placeholder: VL.t('spel.sok'), 'aria-label': VL.t('spel.sok'), enterkeyhint: 'search' });
       const chip = (filter, key) => el('button', { type: 'button', class: 'spel-chip', 'aria-pressed': String(lage.filter === filter), text: VL.t(key) + ' · ' + rakning[filter],
@@ -158,6 +205,7 @@
       };
       falt.addEventListener('input', () => { lage.q = falt.value; fyll(); });
       main.replaceChildren(el('div', { class: 'spel' },
+        idag, infor,
         el('h1', { class: 'stor spel__rubrik', text: VL.t('spel.rubrik') }),
         el('p', { class: 'spel__intro', text: VL.t('spel.intro') }),
         el('form', { class: 'spel-sok', role: 'search', onsubmit: ev => { ev.preventDefault(); falt.blur(); } },
@@ -358,19 +406,29 @@
       if (i < 0) { i = 0; ritaAlla(); } else oppna(i, { rulla: false });   // allt besvarat: alla svar direkt
     }
 
+    // dag-ÅÅÅÅMMDD-m|k (notisen "Kvällsfrågan väntar"): översikten ritas och dagens fråga öppnas ovanpå
+    // (mellanbladet först om frågan är 18+). Notisen om just den frågan markeras som läst.
+    function ritaDagens(paket) {
+      ritaOversikt();
+      if (api.lasNotiserMedUrl) api.lasNotiserMedUrl(S.url(paket)).then(() => VL.klocka && VL.klocka.uppdatera()).catch(() => {});
+      return VL.dagens.oppnaPaket(paket, { prof, personer, api, vidKlar: () => (dagensKort && dagensKort.uppdatera ? dagensKort.uppdatera() : null) });
+    }
     async function rita() {
       const paket = sok.get('paket'), kat = sok.get('kat');
+      if (paket && /^dag-/.test(paket) && VL.dagens && VL.dagens.tolka(paket)) { ritaDagens(paket); return; }
       if (paket) return ritaPaket(paket);
       const i = kat ? kategorier.findIndex(x => x.id === kat) : -1;
       if (i >= 0) return ritaKategori(i);
       return ritaOversikt();
     }
-    await hamtaStatus();
+    await Promise.all([hamtaStatus(), fyllIdag(), fyllInfor()]);
     await rita();
+    // Första gången man öppnar Dagens frågor: ett tydligt tryck slår på Sex 18+ (Jocks beslut 2026-10-02). Inte ovanpå en fråga.
+    if (!sok.get('paket') && dagensKort && VL.dagens && typeof VL.dagens.samtycke === 'function') VL.dagens.samtycke({ api, prof, personer }).catch(() => {});
     return { stoppa };
   }
 
-  VL.spelSida = { rundel, kategoriKort, paketKort, fragaKort, svarRuta, starta };
+  VL.spelSida = { rundel, kategoriKort, paketKort, fragaKort, svarRuta, starta, spelNotis, utanDagPaket };
 
   if (document.body && document.body.dataset.sida === 'spel') (async () => {
     const prof = await VL.guard();
