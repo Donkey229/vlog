@@ -267,8 +267,8 @@ Script.complete();
   }
 
   // raden i profilmenyn (bara admin/redaktör – header.js avgör)
-  const knapp = efter => VL.el('button', { type: 'button', role: 'menuitem', id: 'widgetknapp', text: '📱 ' + VL.t('widget.meny'),
-    onclick: () => { if (efter) efter(); oppna(); } });
+  const knapp = efter => VL.el('button', { type: 'button', role: 'menuitem', id: 'widgetknapp', class: 'meny__rad',
+    onclick: () => { if (efter) efter(); oppna(); } }, VL.ikon ? VL.ikon('lager', { storlek: 20 }) : null, VL.el('span', { text: VL.t('widget.meny') }));
 
   VL.widget = { GUL, GENOMSKINLIG, texter, adresser, skript, oppna, knapp };
 })(window.VL);

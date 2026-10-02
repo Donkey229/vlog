@@ -56,9 +56,13 @@ window.VL = window.VL || {};
     try { if (tyst) localStorage.removeItem(FRAGAT); else localStorage.setItem(FRAGAT, '1'); } catch (e) {}
     if (!tyst) VL.toast(VL.t('notis.avslaget'));
   }
-  // Testnotis till den egna telefonen – så hör man att allt fungerar utan att den andra behöver göra något.
+  // Raderna har en linjeikon framför texten (som profilmenyn och inställningarna) – textens egen emoji tas bort.
+  const utanEmoji = t => String(t).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '');
+  const ikonRad = (ikonNamn, attr, text) => VL.el('button', { type: 'button', role: 'menuitem', class: 'meny__rad', ...attr },
+    VL.ikon ? VL.ikon(ikonNamn, { storlek: 20 }) : null, VL.el('span', { text: utanEmoji(text) }));
+  // Testnotis till den egna telefonen – så hör man att allt fungerar utan att den andra behöver göra något (under Notiser).
   function testKnapp(efter, pren = prenumeration) {
-    return VL.el('button', { type: 'button', role: 'menuitem', id: 'notistest', text: VL.t('notis.test'), onclick: async () => {
+    return ikonRad('skicka', { id: 'notistest', onclick: async () => {
       if (efter) efter();
       const sub = await pren().catch(() => null);
       if (!sub) { VL.toast(VL.t('notis.test_ingen'), 'fel'); return; }   // den här telefonen har inga notiser påslagna
@@ -67,13 +71,13 @@ window.VL = window.VL || {};
       if (r && r.skickat) VL.toast(VL.t('notis.test_ok'));
       else if (r && !r.enheter) VL.toast(VL.t('notis.test_ingen'), 'fel');
       else VL.toast(VL.t('notis.fel'), 'fel');
-    } });
+    } }, VL.t('notis.test'));
   }
   // Menyknappen: visar "Slå på" eller "Stäng av" beroende på om den här enheten får notiser.
   function knapp(efter) {
-    const b = VL.el('button', { type: 'button', role: 'menuitem', id: 'notisknapp', text: VL.t('notis.pa') });
+    const b = ikonRad('klocka', { id: 'notisknapp' }, VL.t('notis.pa'));
     let pa = false;
-    aktiv().then(a => { pa = a; b.textContent = VL.t(a ? 'notis.av' : 'notis.pa'); });
+    aktiv().then(a => { pa = a; b.lastChild.textContent = utanEmoji(VL.t(a ? 'notis.av' : 'notis.pa')); });
     b.onclick = async () => { if (efter) efter(); try { if (pa) await stangAv(); else await slaPa(); } catch (e) { VL.toast(e.message, 'fel'); } };
     return b;
   }

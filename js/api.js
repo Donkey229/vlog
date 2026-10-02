@@ -268,10 +268,18 @@
   const lasNotis = async id => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).eq('id', id).is('read_at', null));
   const lasNotiserMedUrl = async url => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).eq('url', url).is('read_at', null));
   const lasAllaNotiser = async () => must(await sb.from('notiser').update({ read_at: new Date().toISOString() }).is('read_at', null));
-  // träffar
-  const traffar = async () => must(await sb.from('traffar').select('id,title,day,at_time,city,venue,address,note,created_by,updated_by').order('day'));
-  const nyTraff = async t => must(await sb.from('traffar').insert(t).select('id,title,day,at_time,city,venue,address,note').single());
-  const andraTraff = async (id, t) => must(await sb.from('traffar').update(t).eq('id', id).select('id,title,day,at_time,city,venue,address,note').single());
+  // träffar – med träffens tidszon (sql/27), så att sidan visar samma tid som påminnelsen. Finns kolumnen inte än (sql/27
+  // inte körd): ett nytt försök utan zon (42703/PGRST204 om just tidszon – ett annat fel döljs aldrig).
+  const TRAFF = 'id,title,day,at_time,city,venue,address,note';
+  const utanZon = e => /tidszon/i.test(String((e && e.message) || '')) && /42703|PGRST204/.test(String((e && e.code) || '') + ' ' + String((e && e.message) || ''));
+  async function medZon(fraga) {
+    const r = await fraga(TRAFF + ',tidszon');
+    if (r.error && utanZon(r.error)) return must(await fraga(TRAFF));
+    return must(r);
+  }
+  const traffar = async () => medZon(k => sb.from('traffar').select(k + ',created_by,updated_by').order('day'));
+  const nyTraff = async t => medZon(k => sb.from('traffar').insert(t).select(k).single());
+  const andraTraff = async (id, t) => medZon(k => sb.from('traffar').update(t).eq('id', id).select(k).single());
   const taBortTraff = async id => must(await sb.from('traffar').delete().eq('id', id));
   const activity = async (n = 50) => must(await sb.from('activity').select('*').order('at', { ascending: false }).limit(n));
   async function admin(action, payload = {}) {
@@ -322,4 +330,254 @@
   VL.api.nyWidgetnyckel = async () => must(await sb.rpc('ny_widgetnyckel'));
   // stäng av widgeten: tar bort ens egen nyckel (bara den egna) – widgeten på alla telefoner slutar visa något (sql/21 stang_widget)
   VL.api.stangWidget = async () => must(await sb.rpc('stang_widget'));
+
+  // ==== A: utseende och säker sparning (sql/26) ====
+  // Funktionen eller tabellen finns inte (sql/26 inte körd än, eller PostgREST har inte läst om sitt schema) – då kan appen
+  // använda sin reserv i stället för att visa ett fel. Andra fel (nekad, krock, ogiltigt värde) är riktiga fel.
+  const saknasI26 = e => !!e && (['PGRST202', 'PGRST205', '42883', '42P01'].includes(e.code) || /does not exist/i.test(String(e.message || '')));
+  const saknasFel = (vad, e) => Object.assign(new Error(vad + ' finns inte i databasen än (sql/26)'), { saknas: true, orsak: e });
+
+  // Bakgrunden per person (sql/26 utseende): antal bilder, hur synliga (procent) och vilka. Databasen ger bara den egna raden
+  // och gäller på alla enheter. Utan inloggning, utan rad, vid fel (tabellen saknas, nätfel) eller ett okänt värde: standard –
+  // kastar aldrig, så att sidan aldrig går sönder av bakgrunden. Saknas tabellen (sql/26 inte körd) har standardvärdet
+  // saknas: true, och sparaUtseende kastar då ett fel med .saknas – så att Bakgrund kan visa "Kommer snart".
+  const UTSEENDE_ANTAL = [0, 1, 6, 12, 24, 40], UTSEENDE_URVAL = ['alla', 'veckan', 'gillade'], UTSEENDE_FALT = ['bg_antal', 'bg_synlighet', 'bg_urval'];
+  const utseendeStandard = () => ({ bg_antal: 12, bg_synlighet: 12, bg_urval: 'alla' });
+  VL.api.utseende = async () => {
+    const std = utseendeStandard();
+    try {
+      const id = await minId();
+      if (!id) return std;
+      const { data, error } = await sb.from('utseende').select(UTSEENDE_FALT.join(',')).eq('user_id', id).maybeSingle();
+      if (error) { console.warn('[utseende]', error); return saknasI26(error) ? { ...std, saknas: true } : std; }   // saknas: sql/26 inte körd – Bakgrund visar "Kommer snart"
+      if (!data) return std;
+      return {
+        bg_antal: UTSEENDE_ANTAL.includes(data.bg_antal) ? data.bg_antal : std.bg_antal,
+        bg_synlighet: Number.isInteger(data.bg_synlighet) && data.bg_synlighet >= 0 && data.bg_synlighet <= 45 ? data.bg_synlighet : std.bg_synlighet,
+        bg_urval: UTSEENDE_URVAL.includes(data.bg_urval) ? data.bg_urval : std.bg_urval,
+      };
+    } catch (e) { console.warn('[utseende]', e); return std; }
+  };
+  // Sparar den egna raden (skapas första gången). Bara de tre kolumnerna skickas – vems raden är och när den ändrades sätter
+  // databasen. Svarar med den sparade raden; kastar vid fel (t.ex. ogiltigt värde eller ingen inloggning).
+  VL.api.sparaUtseende = async (patch) => {
+    const rad = {};
+    UTSEENDE_FALT.forEach(k => { if (patch && Object.prototype.hasOwnProperty.call(patch, k)) rad[k] = patch[k]; });
+    if (!Object.keys(rad).length) return VL.api.utseende();
+    const { data, error } = await sb.from('utseende').upsert(rad, { onConflict: 'user_id' }).select(UTSEENDE_FALT.join(',')).single();
+    if (error) throw saknasI26(error) ? saknasFel('utseende', error) : error;
+    return data;
+  };
+
+  // Säker sparning av ett minne (sql/26 spara_minne): sett = värdena när Ändra öppnades, precis som de kom från databasen
+  // (för datum: både start_date och end_date); nytt = bara de ändrade fälten (title, story, place, kind, visibility, style,
+  // start_date, end_date). Databasen sparar fält för fält och aldrig över någon annans ändring – svar
+  // { sparade: [fält], krockar: { fält: databasens värde }, updated_at }. Saknas funktionen (sql/26 inte körd): fel med
+  // .saknas = true, så att appen kan använda sin reserv. Andra fel kastas som de är ('saknas' = minnet finns inte eller syns
+  // inte, 'nekad', 'okänt fält: x', 'ogiltigt värde: x', databasens egna villkor).
+  VL.api.sparaMinne = async (id, sett, nytt) => {
+    // sett/nytt skickas alltid (ett saknat argument hade sett ut som "funktionen saknas" och fått appen att ta reserven)
+    const { data, error } = await sb.rpc('spara_minne', { m: id == null ? null : id, sett: sett || {}, nytt: nytt || {} });
+    if (error) {
+      if (saknasI26(error)) throw saknasFel('spara_minne', error);
+      throw error;
+    }
+    return { sparade: (data && data.sparade) || [], krockar: (data && data.krockar) || {}, updated_at: data ? data.updated_at : null };
+  };
+  // Versionerna av ett minne (sql/26 minne_versioner): högst 50, nyast först. Bara Jock och Emma kan läsa dem.
+  VL.api.minnesVersioner = async (id) => {
+    const { data, error } = await sb.from('minne_versioner').select('id,memory_id,falt,gammalt,nytt,andrad_av,andrad')
+      .eq('memory_id', id).order('andrad', { ascending: false }).order('id', { ascending: false }).limit(50);
+    if (error) {
+      if (saknasI26(error)) throw saknasFel('minne_versioner', error);
+      throw error;
+    }
+    return data || [];
+  };
+  // ==== slut A ====
+
+  // ==== B: frågor, plan och påminnelser (sql/27) ====
+  // Dagens frågor, Inför träffen och Er plan. Frågetexterna läses ur databasen (fragepott) först när de behövs – de finns
+  // aldrig i publicerad JavaScript. Lottning, lås och vad den andra får se avgörs i databasen; appen sparar bara egna svar
+  // och skickar aldrig user_id (databasen sätter vem). Finns sql/27 inte än (funktion eller tabell saknas) får felet
+  // .saknas = true, så att sidan kan visa "kommer snart" i stället för ett fel.
+  {
+    const SAKNAS = /PGRST202|PGRST205|42P01|42883|does not exist|could not find the (function|table)/i;
+    const fragaFel = e => {
+      const f = e instanceof Error ? e : new Error(String((e && e.message) || e || 'okänt fel'));
+      if (e && e.code && !f.code) f.code = e.code;
+      if (SAKNAS.test(String((e && e.code) || '') + ' ' + String((e && e.message) || ''))) f.saknas = true;
+      return f;
+    };
+    const kor = async fn => { let r; try { r = await fn(); } catch (e) { throw fragaFel(e); } if (r && r.error) throw fragaFel(r.error); return r ? r.data : null; };
+    const rpc = (f, args) => kor(() => (args ? sb.rpc(f, args) : sb.rpc(f)));
+    // samma standardvärden som tabellen fraga_installning (sql/27) – Sex 18+ och klockan av tills man själv slår på,
+    // "18+ även på morgonen" på (Jocks beslut 2026-10-02: när BÅDA slagit på 18+ gäller det morgon och kväll)
+    const FRAGA_STANDARD = { tidszon: 'Europe/Stockholm', morgon: '08:00', kvall: '21:00', kategorier: ['karlek', 'vardag', 'relation'],
+      vuxen: false, vuxen_morgon: true, niva: 1, visa_klocka: false, tyst_natt: true, paus_till: null,
+      notiser: { dagens: true, din_tur: true, traff: true }, samtycke_sett: null };
+    const INST_FALT = ['tidszon', 'morgon', 'kvall', 'kategorier', 'vuxen', 'vuxen_morgon', 'niva', 'visa_klocka', 'tyst_natt', 'paus_till', 'notiser', 'samtycke_sett'];
+    const INST = INST_FALT.join(',') + ',andrad';
+    const bara = (o, falt) => Object.fromEntries(falt.filter(k => o && Object.prototype.hasOwnProperty.call(o, k) && o[k] !== undefined).map(k => [k, o[k]]));
+    const hhmm = t => (typeof t === 'string' ? t.slice(0, 5) : t);
+    const medStandard = r => { const x = { ...FRAGA_STANDARD, ...(r || {}) }; x.morgon = hhmm(x.morgon); x.kvall = hhmm(x.kvall); return x; };
+
+    Object.assign(VL.api, {
+      FRAGA_STANDARD,
+      // egen inställning (bara egen rad syns); utan rad: standardvärdena
+      fragaInstallning: async () => medStandard(await kor(() => sb.from('fraga_installning').select(INST).maybeSingle())),
+      sparaFragaInstallning: async patch => medStandard(await kor(() => sb.from('fraga_installning').upsert(bara(patch, INST_FALT), { onConflict: 'user_id' }).select(INST).single())),
+      // {kategorier, vuxen, vuxen_morgon, niva, pausat_18, partner_tid} – aldrig den andras zon, nivå eller lista
+      fragaGemensamt: () => rpc('fraga_gemensamt'),
+      // {antal_tillsammans, tillfallen:[{dag, tillfalle, oppen, kl, kan_vara_vuxen, mitt, andra_klar}]} – ingen fråga, ingen kategori
+      dagensIdag: () => rpc('dagens_idag'),
+      // {fraga_id, kategori, vuxen, niva, typ} eller null (inte öppet än, ingen fråga, eller 18+ som inte längre gäller)
+      dagensVisa: (dag, t) => rpc('dagens_visa', { p_dag: dag, p_tillfalle: t }),
+      // {id: {text, alternativ, typ}} på mitt språk, svenska som reserv
+      frageText: async ids => {
+        const lista = [...new Set((ids || []).filter(Boolean))];
+        if (!lista.length) return {};
+        const lang = VL.lang ? VL.lang() : 'sv', egen = lang !== 'sv' && ['en', 'th'].includes(lang) ? 'text_' + lang : null;
+        const rader = await kor(() => sb.from('fragepott').select('id,typ,alternativ,text_sv' + (egen ? ',' + egen : '')).in('id', lista)) || [];
+        // alternativ på mitt språk: nyckel_en/nyckel_th (t.ex. nivåfrågans etiketter_en) ersätter nyckeln när den finns och
+        // har samma form – annars svenskan. Nivåernas ord finns därför bara i databasen, aldrig i publicerad JavaScript.
+        const sprak = egen ? lang : null;
+        const pa = alt => {
+          const a = alt && typeof alt === 'object' ? alt : {}, ut = {};
+          for (const [k, v] of Object.entries(a)) {
+            if (/_(en|th)$/.test(k)) continue;
+            const o = sprak ? a[k + '_' + sprak] : undefined;
+            ut[k] = (Array.isArray(v) ? Array.isArray(o) && o.length === v.length : typeof o === 'string' && o.trim()) ? o : v;
+          }
+          return ut;
+        };
+        const ut = {};
+        for (const r of rader) ut[r.id] = { text: (egen && r[egen] && String(r[egen]).trim()) || r.text_sv, alternativ: pa(r.alternativ), typ: r.typ };
+        return ut;
+      },
+      // eget svar på dagens fråga; fraga_id behövs inte (databasen fyller i dagens fråga) men skickas om sidan har det,
+      // så att ett svar på en fråga som hunnit bytas aldrig hamnar på den nya. Var svaret ligger: skala → varde (1–5),
+      // val → val (det valda alternativet, högst 120 tecken), fritext → text (högst 1000). hoppat skickas alltid
+      // (upsert ändrar bara kolumnerna som skickas – utan det stod en tidigare överhoppning kvar och svaret tömdes).
+      // När ni båda svarat är svaret låst; på en 18+-fråga får det bara ändras nedåt (värdet sänkas, ja → kanske → nej, texten tömmas).
+      dagensSvara: async (dag, t, svar = {}) => kor(() => sb.from('dagens_svar')
+        .upsert({ dag, tillfalle: t, ...bara(svar, ['fraga_id', 'varde', 'val', 'text', 'hoppat']), hoppat: svar.hoppat === true }, { onConflict: 'user_id,dag,tillfalle' })
+        .select('dag,tillfalle,fraga_id,varde,val,text,hoppat,tillbaka,andrad').single()),
+      dagensMittSvar: async (dag, t) => kor(() => sb.from('dagens_svar').select('dag,tillfalle,fraga_id,varde,val,text,hoppat,tillbaka,andrad').eq('dag', dag).eq('tillfalle', t).maybeSingle()),
+      // {klar:false} eller {klar:true, svar:[{user_id, namn, varde, val, text}]} – först när båda svarat (aldrig efter hoppa över)
+      dagensSvaren: (dag, t) => rpc('dagens_svaren', { p_dag: dag, p_tillfalle: t }),
+      // träffen: [{fraga_id, del, omgang, ordning, typ}], framsteg per del, egna svar, och Er plan (bara det båda valt)
+      traffFragor: id => rpc('traff_fragor', { p_traff: id }),
+      traffStatus: id => rpc('traff_status', { p_traff: id }),
+      // träffens svar: jkn → val ('ja' | 'kanske' | 'nej'), skala → varde (1–5), val-frågor och fritext → text (det valda
+      // alternativet eller egen text, högst 500). När delen är öppen (Er plan) får svaren bara ändras nedåt; gränser och
+      // stoppord får alltid ändras. Ett tömt svar räknas som överhoppat.
+      traffSvara: async (id, fragaId, svar = {}) => kor(() => sb.from('traff_svar')
+        .upsert({ traff_id: id, fraga_id: fragaId, ...bara(svar, ['val', 'varde', 'text', 'hoppat']), hoppat: svar.hoppat === true }, { onConflict: 'user_id,traff_id,fraga_id' })
+        .select('traff_id,fraga_id,val,varde,text,hoppat,andrad').single()),
+      traffMinaSvar: async id => (await kor(() => sb.from('traff_svar').select('traff_id,fraga_id,val,varde,text,hoppat,andrad').eq('traff_id', id))) || [],
+      erPlan: id => rpc('er_plan', { p_traff: id }),
+      // Är ett paket i Frågor & spel intimt (18+)? Paketen i en kategori med vuxen === true (site/js/spel/*.js) och alla
+      // Dagens frågor (paket-id dag-…). Vet sidan inte (frågedatan saknas, eller paketet finns inte längre) räknas det som
+      // intimt – säkerhetskopian lägger det då hellre i den egna filen än i data.json.
+      arIntimtPaket: paketId => {
+        const p = String(paketId || '');
+        if (!p || /^dag-/.test(p)) return true;
+        const kat = VL.spelData && Array.isArray(VL.spelData.kategorier) ? VL.spelData.kategorier : null;
+        if (!kat || !kat.length) return true;
+        for (const k of kat) if ((k.paket || []).some(x => x && x.id === p)) return k.vuxen === true;
+        return true;
+      },
+    });
+  }
+  // ==== slut B ====
+
+  // ==== D: Hem och Vi två ====
+  // Hem (omdesignen 2026-10, §6.1). Bara läsning – Hem ändrar aldrig något. Databasens regler (RLS) avgör vad som syns.
+  // antal minnen som den inloggade får se: bara siffran (head-count, inga rader hämtas)
+  VL.api.antalMinnen = async () => { const { count, error } = await sb.from('memories').select('id', { count: 'exact', head: true }); if (error) throw error; return count || 0; };
+  // Höjdpunkter: minnenas namn, typ och datum – updated_at visar "nytt sedan sist" (jämförs bara i telefonen, sparas aldrig i databasen)
+  VL.api.hemMinnen = async () => must(await sb.from('memories').select('id,title,kind,start_date,end_date,cover_media_id,updated_at').order('start_date', { ascending: false }));
+  // Den här veckan: det som laddats upp de senaste 7 dagarna (högst n), nyast först, med tumnagel
+  VL.api.veckan = async (n = 9) => {
+    const sedan = new Date(Date.now() - 7 * 86400000).toISOString();
+    const rader = must(await sb.from('media').select('id,memory_id,kind,thumb_path,created_at').neq('kind', 'audio').gte('created_at', sedan).order('created_at', { ascending: false }).limit(n)) || [];
+    const urls = await signedUrls(rader.map(r => r.thumb_path), 86400);
+    return rader.map(r => ({ ...r, thumb: urls[r.thumb_path] || null }));
+  };
+  // Händelser i Vi två-bladet: omslaget till minnena som notiserna pekar på ({ id: tumnagel })
+  VL.api.minnesOmslag = async ids => {
+    if (!ids.length) return {};
+    const rader = await withThumbs(must(await sb.from('memories').select('id,cover_media_id').in('id', ids)) || []);
+    return Object.fromEntries(rader.map(r => [r.id, r.thumb]));
+  };
+  // ==== slut D ====
+
+  // ==== E: Ändra minne och tidslinjen ====
+  // Tidslinjen (Väg och Lista): minnen nyast först med omslag och antal bilder och filmer. typ = 'resa' eller 'utflykt';
+  // plats = samma plats oavsett versaler (som recent); kat = en kategori. Läser bara – inget skrivs.
+  async function tidslinje(n, { typ = null, plats = null, kat = null } = {}) {
+    let q = sb.from('memories').select(HEAD + (kat ? ',memory_categories!inner(slug)' : ',' + CATS));
+    if (kat) q = q.eq('memory_categories.slug', kat);
+    if (typ) q = q.eq('kind', typ);
+    if (plats) q = q.ilike('place', exakt(plats.trim()));
+    const rows = must(await q.order('start_date', { ascending: false }).limit(n));
+    if (!rows.length) return rows;
+    // alla filrader (för antalet): servern ger högst 1000 rader per svar – en resa kan ha 50 filer, så sida för sida
+    const media = (await Promise.all(VL.urval.omgangar(rows.map(r => r.id), 50).map(async ids => {
+      const ut = [];
+      for (let fran = 0; ; fran += 1000) {
+        const sida = must(await sb.from('media').select('id,memory_id,thumb_path,kind,sort').in('memory_id', ids).order('id').range(fran, fran + 999));
+        ut.push(...sida);
+        if (sida.length < 1000) return ut;
+      }
+    }))).flat();
+    const per = {};
+    media.forEach(m => { (per[m.memory_id] = per[m.memory_id] || []).push(m); });
+    const pick = r => { const egna = (per[r.id] || []).filter(m => m.kind !== 'audio'); return egna.find(m => m.id === r.cover_media_id) || egna.sort((a, b) => a.sort - b.sort)[0]; };
+    const urls = await signedUrls(rows.map(r => pick(r)?.thumb_path), 86400);
+    return rows.map(r => ({ ...r, thumb: urls[pick(r)?.thumb_path] || null,
+      antal: { bilder: (per[r.id] || []).filter(m => m.kind === 'photo').length, filmer: (per[r.id] || []).filter(m => m.kind === 'video').length } }));
+  }
+  // Platsbladet ("Era platser"): minnen med plats, nyast först, och omslaget på de två senaste per plats. Ingen position används.
+  async function platsMinnen() {
+    const rows = must(await sb.from('memories').select('id,place,start_date,cover_media_id').neq('place', '').order('start_date', { ascending: false }));
+    const antal = {}, tva = [];
+    rows.forEach(r => { const k = String(r.place || '').trim().toLocaleLowerCase('sv'); if (k && (antal[k] = (antal[k] || 0) + 1) <= 2) tva.push(r); });
+    const med = tva.length ? await withThumbs(tva).catch(() => tva) : [];
+    const tumme = {}; med.forEach(r => { tumme[r.id] = r.thumb || null; });
+    return rows.map(r => ({ id: r.id, place: r.place, start_date: r.start_date, thumb: tumme[r.id] || null }));
+  }
+  Object.assign(VL.api, { tidslinje, platsMinnen });
+  // ==== slut E ====
+
+  // ==== F: navigering och inställningar ====
+  // Bilderna bakom sidan (Bakgrund, spec §6.5): foton ur minnen som tittaren får se (RLS gäller som vanligt), slumpade bland de
+  // 200 senaste. urval 'veckan' = upplagda de senaste 7 dagarna, 'gillade' = ur minnen jag gillat, 'alla' = alla. publika: bara
+  // minnen som alla får se (läget "Bara publika bilder"). stor: ETT fullstort foto (antal 1) i stället för tumnaglar.
+  // Bara läsning – inget skrivs. Inga gillade/publika minnen ger en tom lista utan att fråga efter bilder.
+  VL.api.bakgrundBilder = async ({ urval = 'alla', antal = 12, publika = false, stor = false } = {}) => {
+    let minnen = null;   // null = alla minnen tittaren ser
+    if (urval === 'gillade') {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return [];
+      minnen = (must(await sb.from('likes').select('memory_id').eq('user_id', user.id)) || []).map(r => r.memory_id);
+    }
+    if (publika) {
+      const pub = (must(await sb.from('memories').select('id').eq('visibility', 'public')) || []).map(r => r.id);
+      minnen = minnen ? minnen.filter(id => pub.includes(id)) : pub;
+    }
+    if (minnen && !minnen.length) return [];
+    let q = sb.from('media').select('path,thumb_path,memory_id').eq('kind', 'photo');
+    if (minnen) q = q.in('memory_id', minnen.slice(0, 300));
+    if (urval === 'veckan') q = q.gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString());
+    const rader = must(await q.order('created_at', { ascending: false }).limit(200)) || [];
+    const blandat = [...rader];
+    for (let i = blandat.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [blandat[i], blandat[j]] = [blandat[j], blandat[i]]; }
+    const valda = blandat.slice(0, Math.max(1, Math.min(40, antal)));
+    const fil = r => (stor ? r.path : r.thumb_path);
+    const urls = await signedUrls(valda.map(fil), 86400);
+    return valda.map(r => urls[fil(r)]).filter(Boolean);
+  };
+  // ==== slut F ====
 })(window.VL);
