@@ -179,6 +179,13 @@
       kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: new Intl.DateTimeFormat(VL.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(D.parseDay(k)) + (forstaTid ? ' · ' + new Intl.DateTimeFormat(VL.locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(forstaTid)) : '') }), VL.urval ? VL.urval.sammanfattning(lista) : VL.tn('minne.bilder', lista.length)),
         galleri(lista, urls));
     });
+    // Bilder vars dag ligger utanför minnets datum (äldre datumbyten, avbrutna flyttar) göms aldrig – de visas sist.
+    if (!valdDag) {
+      const utanfor = alla.filter(m => !dagar.includes(m.day));
+      const ovriga = VL.urval ? VL.urval.filtrera(utanfor, mediaFlik) : utanfor;
+      if (ovriga.length) kropp.append(el('h3', { class: 'dagrubrik' }, el('small', { text: VL.t('minne.ovriga') }), VL.urval ? VL.urval.sammanfattning(ovriga) : VL.tn('minne.bilder', ovriga.length)),
+        galleri(ovriga, urls));
+    }
     // YouTube / Instagram / TikTok
     data.links.forEach(l => kropp.append(el('div', { class: 'inbaddning' + (l.platform === 'youtube' ? '' : ' inbaddning--hog') },
       el('iframe', { src: l.embed_url, title: l.platform, loading: 'lazy', allow: 'encrypted-media; picture-in-picture; fullscreen', referrerpolicy: 'strict-origin-when-cross-origin', sandbox: 'allow-scripts allow-same-origin allow-popups allow-presentation' }))));

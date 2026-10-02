@@ -48,7 +48,9 @@
     const allaTraffar = VL.text.kanRedigera(prof) && VL.traffar ? await VL.api.traffar().catch(() => []) : [];
     const traffPaDag = {}; allaTraffar.forEach(t => { traffPaDag[t.day] = traffPaDag[t.day] || t; });
     const nasta = VL.traffar ? VL.traffar.nasta(allaTraffar, D.todayKey()) : null;
-    if (nasta) main.append(el('a', { class: 'nasta-traff', href: 'traffar.html?id=' + nasta.id },
+    // nästa träff visas EN gång: under hjärtat (räknaren, Emmas önskan) – kortet bara när räknaren inte redan visar en träff
+    const iRaknaren = !!main.querySelector('.hjarta-raknare:not([hidden]) .hjarta-raknare__traff[href^="traffar.html?id="]');
+    if (nasta && !iRaknaren) main.append(el('a', { class: 'nasta-traff', href: 'traffar.html?id=' + nasta.id },
       el('small', { text: VL.t('traff.nasta') + ' · ' + VL.traffar.nedrakning(nasta.day, D.todayKey()) }),
       el('strong', { text: '📍 ' + nasta.title }),
       el('span', { text: VL.traffar.datumText(nasta) + (VL.traffar.plats(nasta) ? ' · ' + VL.traffar.plats(nasta) : '') })));
@@ -62,9 +64,11 @@
       const rad = el('div', { class: 'kal__vecka' }, vecka.map(c => {
         const cls = 'dag' + (c.inMonth ? '' : ' dag--ute') + (c.isToday ? ' dag--idag' : '') + (c.thumb ? ' dag--har' : '');
         const inner = [el('span', { class: 'dag__n', text: c.day }), c.thumb ? el('img', { src: c.thumb, alt: '', loading: 'lazy' }) : null,
-          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? VL.traffar.moln(traffPaDag[c.key]) : null];
+          c.photos + c.videos > 1 ? el('span', { class: 'dag__antal', text: c.photos + c.videos }) : null, c.videos ? el('span', { class: 'dag__film', text: '▶' }) : null, traffPaDag[c.key] ? VL.traffar.moln(traffPaDag[c.key]) : null,
+          c.memoryIds.length > 1 ? el('span', { class: 'dag__flera', text: c.memoryIds.length, 'aria-hidden': 'true' }) : null];   // flera minnen: siffran, tryck = välj
         const mal = VL.calendar.dagMal(c, kanSkapa, !!traffPaDag[c.key]);
-        return mal === 'minne' ? el('a', { class: cls, href: oppna(c.memoryId), 'aria-label': c.key }, inner)
+        return mal === 'val' ? el('button', { type: 'button', class: cls + ' dag--val', 'aria-label': c.key + ' · ' + VL.t('kal.flera', { n: c.memoryIds.length }), onclick: () => VL.calendar.valjDialog(c) }, inner)
+          : mal === 'minne' ? el('a', { class: cls, href: oppna(c.memoryId), 'aria-label': c.key }, inner)
           : mal === 'traff' ? el('a', { class: cls, href: 'traffar.html?id=' + traffPaDag[c.key].id, 'aria-label': '📍 ' + traffPaDag[c.key].title }, inner)
           : mal === 'ny' ? el('button', { type: 'button', class: cls + ' dag--ny', 'aria-label': VL.t('kal.ny_dag', { dag: new Intl.DateTimeFormat(VL.locale(), { dateStyle: 'long' }).format(D.parseDay(c.key)) }), onclick: () => VL.redigera.nyttMinne(c.key) }, inner)
           : el('div', { class: cls }, inner);
