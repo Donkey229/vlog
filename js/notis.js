@@ -5,9 +5,15 @@ window.VL = window.VL || {};
   const FRAGAT = 'vl-notis-fragat';
   // datum: minne utan titel – datumet skrivs på textens språk (mottagarens), inte avsändarens.
   function text({ namn, typ, antal, titel, datum }, lang = VL.lang()) {
-    const k = typ === 'bilder' ? (antal === 1 ? 'notis.bild' : 'notis.bilder') : typ === 'bort' && antal === 1 ? 'notis.bort_en' : 'notis.' + typ;
+    let vad = null;
+    if (typ === 'media') {   // antal = de uppladdade raderna ({ kind }): "2 bilder och 1 film" – filmer räknas inte som bilder
+      const lista = Array.isArray(antal) ? antal : [];
+      if (VL.urval) vad = VL.urval.beskriv(lista, lang); else typ = 'bilder';   // utan urval.js: som förut
+      antal = lista.length;
+    }
+    const k = typ === 'media' ? 'notis.media' : typ === 'bilder' ? (antal === 1 ? 'notis.bild' : 'notis.bilder') : typ === 'bort' && antal === 1 ? 'notis.bort_en' : 'notis.' + typ;
     const t = titel || (datum && datum.start ? VL.dates.formatRange(datum.start, datum.slut, VL.locale(lang)) : VL.t('notis.vloggen', null, lang));
-    return Array.from(VL.t(k, { namn: namn || '?', n: antal, titel: t }, lang)).slice(0, 140).join('');   // hela tecken – en halv emoji avvisas av databasen
+    return Array.from(VL.t(k, { namn: namn || '?', n: antal, titel: t, vad }, lang)).slice(0, 140).join('');   // hela tecken – en halv emoji avvisas av databasen
   }
   // Texten på alla tre språken – notis-funktionen väljer mottagarens (profiles.lang), inte avsändarens.
   const texter = o => ({ sv: text(o, 'sv'), en: text(o, 'en'), th: text(o, 'th') });

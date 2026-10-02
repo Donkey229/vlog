@@ -44,7 +44,7 @@
   }
 
   // ---- tillstånd: jag, den andra, reaktionerna (nyast först) ----
-  const lage = { jag: null, andra: null, rader: [], fel: false, hero: null, ark: null, skickar: false, lyssnar: false };
+  const lage = { jag: null, andra: null, rader: [], fel: false, hero: null, ark: null, skickar: false, lyssnar: false, raknare: null };
   async function forbered({ prof, personer } = {}) {
     lage.jag = prof || lage.jag || await VL.api.me();
     const p = personer || await VL.api.profiles();
@@ -63,11 +63,13 @@
     const bild = el('div', { class: 'hjarta-hero__bild', 'aria-hidden': 'true' });
     // går rutan inte att öppna (nätfel) syns ett fel – aldrig tystnad
     const knapp = el('button', { type: 'button', class: 'hjarta-stort', onclick: () => oppna().then(d => d || VL.toast(VL.t('fel.allmant'), 'fel')).catch(e => VL.toast(e.message || VL.t('fel.allmant'), 'fel')) });
-    const hero = el('section', { class: 'hjarta-hero' }, bild, knapp,
+    // dagar tillsammans + nästa träff, direkt under hjärtat (raknare.js, Emmas önskan 2026-10-02)
+    const raknare = VL.raknare ? el('div', { class: 'hjarta-raknare', hidden: true }) : null;
+    const hero = el('section', { class: 'hjarta-hero' }, bild, knapp, raknare,
       el('button', { type: 'button', class: 'hjarta-hero__byt', 'aria-label': VL.t('hjarta.bakgrund'), title: VL.t('hjarta.bakgrund'), text: '🖼', onclick: () => valjBakgrund() }));
-    lage.hero = hero;
+    lage.hero = hero; lage.raknare = null;
     ritaStort();
-    await visaBakgrund();
+    await Promise.all([visaBakgrund(), ritaRaknare()]);
     if (!lage.lyssnar) { lage.lyssnar = true; window.addEventListener('hashchange', () => { if (franAdress(location.hash)) oppnaFranAdress(); }); }
     return hero;
   }
@@ -84,6 +86,12 @@
     // (replaceChildren gör null till texten "null" – därför en tom lista när inget är nytt)
     knapp.replaceChildren(ikon('hjarta-stort__form'), el('span', { class: 'hjarta-stort__inne' }, inne), ...(ny ? [el('span', { class: 'hjarta-stort__ny', text: VL.t('hjarta.ny') })] : []));
     knapp.setAttribute('aria-label', r ? VL.t('hjarta.oppna_stort', { namn: namn(), text: visaText(r) }) : tom);
+  }
+  // räknaren: startdagen hämtas en gång, träffarna vid varje uppdatering; ritas med dagens datum (rätt även efter midnatt)
+  async function ritaRaknare() {
+    const r = lage.hero && lage.hero.querySelector('.hjarta-raknare'); if (!r || !VL.raknare) return;
+    lage.raknare = await VL.raknare.hamta(lage.raknare);
+    VL.raknare.rita(r, lage.raknare);
   }
   async function visaBakgrund() {
     const hero = lage.hero; if (!hero) return;
@@ -179,7 +187,7 @@
   // uppdateras när en push-notis kommer, när appen tas fram igen och varje minut (klockan säger till och räknar siffran efteråt)
   async function uppdatera() {
     if (!lage.andra || (!lage.hero && !lage.ark)) return;
-    await hamta();
+    await Promise.all([hamta(), ritaRaknare()]);
     ritaStort(); ritaHistorik();
     await markeraLast();   // det som kommer medan rutan är öppen har man redan sett
   }

@@ -8,10 +8,11 @@
   }
   // "1 bild", "3 bilder", "1 film", … i ordningen bilder, filmer, ljud (tomma hoppas över)
   const ORD = { bilder: ['antal.bild', 'antal.bilder'], filmer: ['antal.film', 'antal.filmer'], ljud: ['antal.ljud1', 'antal.ljud'] };
-  const delar = lista => { const r = rakna(lista); return Object.keys(ORD).filter(k => r[k]).map(k => VL.t(ORD[k][r[k] === 1 ? 0 : 1], { n: r[k] })); };
-  function beskriv(lista) {
-    const d = delar(lista);
-    return d.length <= 1 ? (d[0] || '') : d.slice(0, -1).join(', ') + VL.t('urval.och') + d[d.length - 1];
+  // lang: ett annat språk än det valda (notisen skrivs på mottagarens språk)
+  const delar = (lista, lang) => { const r = rakna(lista); return Object.keys(ORD).filter(k => r[k]).map(k => VL.t(ORD[k][r[k] === 1 ? 0 : 1], { n: r[k] }, lang)); };
+  function beskriv(lista, lang) {
+    const d = delar(lista, lang);
+    return d.length <= 1 ? (d[0] || '') : d.slice(0, -1).join(', ') + VL.t('urval.och', null, lang) + d[d.length - 1];
   }
   const sammanfattning = lista => delar(lista).join(' · ');
   const marke = m => (m.kind === 'video' ? '▶' + (m.duration_s ? ' ' + Math.round(m.duration_s) + ' s' : '') : m.kind === 'audio' ? '♪' : '');

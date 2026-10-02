@@ -12,7 +12,7 @@
     return dagar === 1 ? VL.t('tid.igar') : VL.t('tid.dag', { n: dagar });
   }
   // bara appens egna sidor (samma regel som i databasen och service workern)
-  const sakerUrl = u => (/^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html)$/.test(u || '') ? u : 'index.html');
+  const sakerUrl = u => (/^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|index\.html|spel\.html(\?paket=[a-z0-9-]{1,60})?)$/.test(u || '') ? u : 'index.html');
 
   function lista(rader, { onOppna, onLasAlla, nu } = {}) {
     const l = VL.el('div', { class: 'klocka__lista' });
@@ -24,8 +24,8 @@
     return l;
   }
 
-  // sidans egen adress i samma form som notisernas länkar (bara minnen och träffar kan vara mål)
-  const sidansUrl = (path, search) => { const u = (path || '').split('/').pop() + (search || ''); return /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?)$/.test(u) ? u : null; };
+  // sidans egen adress i samma form som notisernas länkar (bara minnen, träffar och spelpaket kan vara mål)
+  const sidansUrl = (path, search) => { const u = (path || '').split('/').pop() + (search || ''); return /^(minne\.html\?id=[0-9a-f-]{36}|traffar\.html(\?id=[0-9a-f-]{36})?|spel\.html\?paket=[a-z0-9-]{1,60})$/.test(u) ? u : null; };
   let knapp = null, timer = null, lyssnar = false;
   async function uppdatera() {
     // stora hjärtat och den öppna rutan först – en reaktion som lästs i den öppna rutan ska inte räknas med i siffran

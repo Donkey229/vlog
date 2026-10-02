@@ -16,5 +16,9 @@
   // Admin och redaktör redigerar alla minnen; ta bort får admin, eller redaktören sina egna (samma regler som i databasen, sql/12).
   const kanRedigera = prof => !!prof && (prof.role === 'admin' || prof.role === 'editor');
   const kanTaBort = (prof, m) => !!prof && !!m && (prof.role === 'admin' || (prof.role === 'editor' && m.created_by === prof.id));
-  VL.text = { readingMinutes, gruppera, skribent, kanRedigera, kanTaBort };
+  // En bild, film eller ett ljud tar bara den bort som lagt upp den; admin tar bort alla (sql/19). Okänd uppladdare = bara admin.
+  const kanTaBortFil = (prof, x) => !!prof && !!x && (prof.role === 'admin' || (prof.role === 'editor' && !!x.created_by && x.created_by === prof.id));
+  // Filerna i minnet m som jag INTE får ta bort – finns det några får en redaktör inte ta bort hela minnet.
+  const andrasFiler = (prof, m) => ((m && m.media) || []).filter(x => !kanTaBortFil(prof, x));
+  VL.text = { readingMinutes, gruppera, skribent, kanRedigera, kanTaBort, kanTaBortFil, andrasFiler };
 })(window.VL);

@@ -14,7 +14,18 @@
     const { data } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
     return data ? { ...data, email: session.user.email } : null;
   }
-  const settings = async () => must(await sb.from('settings').select('title,couple_path,social').eq('id', 1).single());
+  // Startdagen (dagar tillsammans, sql/20) får bara inloggade läsa – besökare frågar inte efter den. Saknas kolumnen
+  // (sql/20 inte körd än) eller nekas den: ett nytt försök utan – sidhuvudet ska aldrig gå sönder av räknaren.
+  async function settings() {
+    let session = null;
+    try { session = (await sb.auth.getSession()).data.session; } catch (e) { session = null; }   // okänd inloggning = som besökare
+    if (session) {
+      const r = await sb.from('settings').select('title,couple_path,social,tillsammans_sedan').eq('id', 1).single();
+      if (!r.error) return r.data;
+      console.warn('[inställningar] startdagen', r.error);
+    }
+    return must(await sb.from('settings').select('title,couple_path,social').eq('id', 1).single());
+  }
   const updateSettings = async (patch) => must(await sb.from('settings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', 1));
 
   async function signedUrls(paths, ttl = 3600) {
@@ -38,7 +49,8 @@
   // Minnen som överlappar [fromKey, toKey], i kalenderns format (Task 4).
   async function monthMemories(fromKey, toKey) {
     const rows = must(await sb.from('memories').select(HEAD + ',media!media_memory_id_fkey(kind,day,thumb_path,poster_path,sort)')
-      .lte('start_date', toKey).or(`end_date.gte.${fromKey},and(end_date.is.null,start_date.gte.${fromKey})`));
+      .lte('start_date', toKey).or(`end_date.gte.${fromKey},and(end_date.is.null,start_date.gte.${fromKey})`)
+      .order('start_date').order('created_at'));   // samma ordning varje gång: kalenderns val bland lika minnen växlar inte
     const urls = await signedUrls(rows.flatMap(r => r.media.filter(m => m.kind !== 'audio').map(m => m.thumb_path)), 86400);
     return rows.map(r => {
       const days = {};
@@ -64,8 +76,10 @@
   const platsRader = async () => must(await sb.from('memories').select('place').neq('place', ''));
   async function search(q) { return withThumbs(must(await sb.rpc('search_memories', { q }))); }
   // Minnen som täcker dagen k (för importen – se VL.dates.valjImportMinne). media behövs för sorteringsordningen.
-  const importKandidater = async (k) => must(await sb.from('memories').select('id,kind,start_date,end_date,cover_media_id,media!media_memory_id_fkey(id)')
-    .lte('start_date', k).or(`end_date.gte.${k},and(end_date.is.null,start_date.eq.${k})`));
+  // Bara privata: importen lägger aldrig bilder i ett minne som gäster eller alla ser (privat som standard) – då blir det ett
+  // eget privat dag-minne, och kalendern visar båda. title: adminsidans Klart-lista och notisen nämner minnet vid namn.
+  const importKandidater = async (k) => must(await sb.from('memories').select('id,title,kind,start_date,end_date,cover_media_id,media!media_memory_id_fkey(id)')
+    .lte('start_date', k).or(`end_date.gte.${k},and(end_date.is.null,start_date.eq.${k})`).eq('visibility', 'private'));
   async function byIds(ids) {
     if (!ids.length) return [];
     const rows = must(await sb.from('memories').select(HEAD + ',' + CATS).in('id', ids));
@@ -92,10 +106,16 @@
   }
   const createMemory = async (m) => must(await sb.from('memories').insert(m).select().single());
   const updateMemory = async (id, patch) => must(await sb.from('memories').update(patch).eq('id', id));
+  // Minnet (och med det bildraderna) tas bort FÖRST – databasen säger nej om det har någon annans bilder (sql/19), eller om det
+  // har bilder som inte finns i listan man sett (m.media; sql/23 ta_bort_minne – t.ex. Emmas nya bilder medan Jocks sida stod
+  // öppen) – och filerna sedan, bara om minnet verkligen försvann. Ett nej eller ett avbrott lämnar aldrig trasiga bilder.
   async function deleteMemory(m) {
-    const paths = m.media.flatMap(x => [x.path, x.thumb_path, x.poster_path]).filter(Boolean);
-    for (const omg of VL.urval.omgangar(paths, 1000)) must(await sb.storage.from('media').remove(omg));   // lagringens gräns: 1000 sökvägar per anrop
-    must(await sb.from('memories').delete().eq('id', m.id));
+    const { data: borta, error } = await sb.rpc('ta_bort_minne', { m: m.id, sedda: (m.media || []).map(x => x.id) });
+    if (error) throw (/nya_bilder/.test(error.message || '') ? new Error(VL.t('bort.nya_bilder')) : error);
+    if (!borta) throw new Error(VL.t('bort.minne_nekad'));
+    const paths = (m.media || []).flatMap(x => [x.path, x.thumb_path, x.poster_path]).filter(Boolean);
+    // Filer utan rad syns ingenstans: går något fel här är minnet ändå borttaget och resterna kan städas senare.
+    for (const omg of VL.urval.omgangar(paths, 1000)) await sb.storage.from('media').remove(omg).catch(() => {});   // lagringens gräns: 1000 sökvägar per anrop
     // Rester i minnets mapp (t.ex. från en avbruten uppladdning) – men inte filer som flyttats till ett annat minne.
     const { data: lista } = await sb.storage.from('media').list('m/' + m.id, { limit: 1000 });
     const rester = (lista || []).map(o => 'm/' + m.id + '/' + o.name);
@@ -135,21 +155,28 @@
       const bytes = p.full.size + p.thumb.size + (p.poster ? p.poster.size : 0);
       return must(await sb.from('media').insert({ memory_id: memoryId, kind: p.kind, path, thumb_path: thumb, poster_path: poster, taken_at: p.takenAt ? p.takenAt.toISOString() : null, day, width: p.width, height: p.height, duration_s: p.durationS ?? null, bytes, sort, caption: p.kind === 'audio' ? (p.full.name || '').replace(/\.[^.]+$/, '').slice(0, 500) : '' }).select().single());
     } catch (e) {
+      // Svaret kan ha tappats fast raden sparades (mobilnät): finns raden är bilden uppe – den används, filerna får vara kvar
+      // (annars en bildrad utan fil, och en dubblett vid nästa försök). Databasen släpper dessutom aldrig en fil som en rad använder (sql/23).
+      let sparad = null;
+      try { sparad = (await sb.from('media').select().eq('path', path).maybeSingle()).data; } catch (x) { sparad = null; }
+      if (sparad) return sparad;
       if (klara.length) await sb.storage.from('media').remove(klara);   // inga föräldralösa filer
       throw e;
     }
   }
-  // Tar bort filerna i lagringen först (rättigheten följer bildraden), sedan raderna – i omgångar om 50, så att
-  // URL:en (id-listan) och lagringens gräns (1000 sökvägar) aldrig överskrids och ett fel bara lämnar en liten rest.
+  // Raderna först, i omgångar om 50 (id-listan hamnar i URL:en): databasen tar bara bort det jag får – egna bilder, admin
+  // allas (sql/19) – och svarar med raderna som faktiskt försvann. Bara deras filer tas sedan bort, så en bild som blev kvar
+  // har alltid kvar sin fil och ett avbrott lämnar bara osynliga rester (lagringen släpper dessutom bara filer utan rad).
   // Svarar med antalet borttagna; vid fel får felet .borttagna så att användaren ser hur långt det kom.
   async function removeMediaMany(rows) {
     let borttagna = 0; const klara = [];
     try {
       for (const omg of VL.urval.omgangar(rows, 50)) {
-        const paths = omg.flatMap(r => [r.path, r.thumb_path, r.poster_path]).filter(Boolean);
-        must(await sb.storage.from('media').remove(paths));
-        must(await sb.from('media').delete().in('id', omg.map(r => r.id)));
-        klara.push(...paths); borttagna += omg.length;
+        const borta = must(await sb.from('media').delete().in('id', omg.map(r => r.id)).select('id,path,thumb_path,poster_path')) || [];
+        borttagna += borta.length;
+        const paths = borta.flatMap(r => [r.path, r.thumb_path, r.poster_path]).filter(Boolean);
+        if (paths.length) { klara.push(...paths); await sb.storage.from('media').remove(paths).catch(() => {}); }
+        if (borta.length < omg.length) throw new Error(VL.t('urval.nekad'));   // någon annans bild: den och filen blir kvar
       }
     } catch (e) { e.borttagna = borttagna; throw e; }
     finally { if (klara.length) await clearCouplePathIf(klara).catch(() => {}); }
@@ -158,9 +185,35 @@
   const removeMedia = row => removeMediaMany([row]);
   const setCover = async (memoryId, mediaId) => updateMemory(memoryId, { cover_media_id: mediaId });
   const setMediaDay = async (id, day) => must(await sb.from('media').update({ day }).eq('id', id));
+  // Byt datum (och annat i patch) på ett minne utan att någon bild hamnar utanför minnets dagar – då syns den varken i
+  // galleriet eller i kalendern. Databasen flyttar bildernas dagar i samma steg (sql/23); det här är reserven tills den är
+  // körd, och den utgår från databasens egna rader (färsk start före bytet, färsk bildlista efteråt), aldrig från sidans
+  // gamla lista. Bara bilder som ligger utanför flyttas; ett avbrott rättas av nästa sparning. Svarar med antalet flyttade.
+  // visade: datumen sidan visade ({ start_date, end_date }). Har någon annan hunnit ändra dem (databasens färska datum skiljer)
+  // ändras ingenting och felet har .andrat – annars skrev en sida som stått öppen länge tillbaka sina gamla datum, och
+  // databasen flyttade den andras nya bilder till fel dag.
+  async function flyttaMinne(id, patch, visade = null) {
+    const fore = must(await sb.from('memories').select('start_date,end_date').eq('id', id).single());
+    const slutAv = x => (x.end_date && x.end_date !== x.start_date ? x.end_date : null);
+    if (visade && (fore.start_date !== visade.start_date || slutAv(fore) !== slutAv(visade))) throw Object.assign(new Error(VL.t('red.andrat')), { andrat: true });
+    must(await sb.from('memories').update(patch).eq('id', id));
+    const start = patch.start_date || fore.start_date;
+    const slut = 'end_date' in patch ? patch.end_date : fore.end_date;
+    const sista = slut || start;
+    const utanfor = (must(await sb.from('media').select('id,day').eq('memory_id', id)) || []).filter(x => x.day < start || x.day > sista);
+    for (const x of utanfor) await setMediaDay(x.id, VL.dates.remapDay(x.day, fore.start_date, start, slut));
+    return utanfor.length;
+  }
   // Slå ihop i databasen (allt eller inget): bilder, länkar, kommentarer, gilla, kategorier och text flyttas till target.
   // Filerna ligger kvar under sina gamla sökvägar – skrivrätten följer bildens rad (can_write_object).
-  const mergeInto = async (target, sources) => must(await sb.rpc('merge_memories', { target: target.id, sources: sources.map(x => x.id) }));
+  // Databasen (sql/24) ger målet den strängaste synligheten, utökar dess datum och säger nej (inget ändrat) om något kom till
+  // i en källa under tiden eller ett minne inte finns längre – de två nejen blir begripliga besked.
+  async function mergeInto(target, sources) {
+    const { error } = await sb.rpc('merge_memories', { target: target.id, sources: sources.map(x => x.id) });
+    if (!error) return null;
+    const m = String(error.message || '');
+    throw (/ihop_andrat/.test(m) ? new Error(VL.t('ihop.fel_andrat')) : /ihop_saknas/.test(m) ? new Error(VL.t('ihop.fel_saknas')) : error);
+  }
   const addLink = async (memoryId, p, sort = 0) => must(await sb.from('links').insert({ memory_id: memoryId, platform: p.platform, url: p.url, embed_url: p.embedUrl, sort }).select().single());
   const removeLink = async (id) => must(await sb.from('links').delete().eq('id', id));
   // kategorier
@@ -251,8 +304,22 @@
   const foton = async (n = 300) => must(await sb.from('media').select('id,path,thumb_path,day').eq('kind', 'photo').order('day', { ascending: false }).limit(n));
   const notis = async (text, url, test = false, endpoint = null) => { const { data, error } = await sb.functions.invoke('notis', { body: { text, url, test, endpoint } }); if (error) throw error; return data; };
   VL.api = { me, settings, updateSettings, signedUrls, headers, withThumbs, monthMemories, recent, platsRader, search, popular, related, memory,
-    createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, mergeInto, addLink, removeLink,
+    createMemory, updateMemory, deleteMemory, duplicateMemory, importKandidater, uploadMedia, removeMedia, removeMediaMany, setCover, setMediaDay, flyttaMinne, mergeInto, addLink, removeLink,
     categories, setCategories, addCategory, catName, toggleLike, addComment, approveComment, deleteComment, pendingComments,
     about, updateAbout, uploadAboutPhoto, profiles, updateProfile, uploadAvatar, storageUsedMB, activity, notiser, olastaNotiser, lasNotis, lasNotiserMedUrl, lasAllaNotiser, traffar, nyTraff, andraTraff, taBortTraff, mediaById, minnesTitlar, admin, byStart, sparaPrenumeration, taBortPrenumeration, taBortAllaPrenumerationer, notis,
     reaktioner, skickaReaktion, lasReaktioner, olastaReaktioner, notisReaktion, bakgrund, sattBakgrund, taBortBakgrund, foton };
+  // Frågor & spel (sql/22): status = antal egna och den andras svar per paket (bara siffror); svaren i ett paket = mina +
+  // den andras på frågor jag själv svarat på (databasen släpper inte fram fler); spara = upsert på (user_id, paket, fraga),
+  // där user_id alltid sätts av databasen (auth.uid()) och aldrig skickas härifrån.
+  const SPELSVAR = 'user_id,fraga,svar,gissning,andrad';
+  Object.assign(VL.api, {
+    spelStatus: async () => must(await sb.rpc('spel_status')) || [],
+    spelSvar: async paket => must(await sb.from('spel_svar').select(SPELSVAR).eq('paket', paket)) || [],
+    sparaSpelSvar: async (paket, fraga, svar, gissning = null) =>
+      must(await sb.from('spel_svar').upsert({ paket, fraga, svar, gissning }, { onConflict: 'user_id,paket,fraga' }).select(SPELSVAR).single()),
+  });
+  // iPhone-widgeten (Scriptable): ny personlig nyckel i klartext EN gång – databasen sparar bara dess sha256; den gamla slutar gälla (sql/21)
+  VL.api.nyWidgetnyckel = async () => must(await sb.rpc('ny_widgetnyckel'));
+  // stäng av widgeten: tar bort ens egen nyckel (bara den egna) – widgeten på alla telefoner slutar visa något (sql/21 stang_widget)
+  VL.api.stangWidget = async () => must(await sb.rpc('stang_widget'));
 })(window.VL);

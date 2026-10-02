@@ -54,31 +54,35 @@
     };
     placera(); setTimeout(() => { kvar = false; t.remove(); }, 4000);
   };
-  VL.openDialog = function (title, body, { okText, onOk } = {}) {
+  VL.openDialog = function (title, body, { okText, onOk, avbrytText } = {}) {   // avbrytText: t.ex. "Stäng" när rutan bara är ett besked
     const d = VL.el('dialog', { class: 'dlg' },
       VL.el('h2', { text: title }), body,
       VL.el('div', { class: 'dlg__knappar' },
-        VL.el('button', { type: 'button', class: 'knapp knapp--sekundar', text: VL.t('red.avbryt'), onclick: () => d.close() }),
+        VL.el('button', { type: 'button', class: 'knapp knapp--sekundar', text: avbrytText || VL.t('red.avbryt'), onclick: () => d.close() }),
         okText ? VL.el('button', { type: 'button', class: 'knapp', text: okText, onclick: async (ev) => { ev.target.disabled = true; try { if ((await onOk()) !== false) d.close(); } catch (e) { VL.toast(e.message || VL.t('fel.allmant'), 'fel'); } finally { ev.target.disabled = false; } } }) : null));
     d.addEventListener('close', () => d.remove());
     document.body.append(d); d.showModal();
     return { close: () => d.close(), dialog: d };
   };
-  VL.confirmDialog = text => new Promise(res => {
+  VL.confirmDialog = (text, okText) => new Promise(res => {   // okText: egen knapptext (t.ex. "Gör till Gäst"), annars "Ta bort"
     let svar = false;
-    const { dialog } = VL.openDialog(text, VL.el('p', { text: '' }), { okText: VL.t('minne.ta_bort'), onOk: () => { svar = true; } });
+    const { dialog } = VL.openDialog(text, VL.el('p', { text: '' }), { okText: okText || VL.t('minne.ta_bort'), onOk: () => { svar = true; } });
     dialog.addEventListener('close', () => res(svar));
   });
-  VL.safeNext = s => /^(index|minne|admin|traffar|om)\.html(\?[\w=&%.-]*)?$/.test(s || '') ? s : 'index.html';   // alla sidor som kör guard
-  VL.guard = async function ({ allowAnon = false } = {}) {
+  // alla sidor som kör guard; #hjarta (widgeten, notisen om en reaktion) får följa med så att hjärtat öppnas efter inloggningen
+  VL.safeNext = s => /^(index|minne|admin|traffar|om|spel)\.html(\?[\w=&%.-]*)?(#hjarta)?$/.test(s || '') ? s : 'index.html';
+  // ga = sidbytet (testerna byter ut det när en utloggad skickas till inloggningen)
+  VL.guard = async function ({ allowAnon = false, ga = url => location.replace(url) } = {}) {
     // Länk från ett mejl som hamnat på startsidan (t.ex. inbjudan från Supabase-panelen): skicka vidare till inloggningen.
     if (new URLSearchParams(location.search).has('token_hash')) { location.replace('auth.html' + location.search); return null; }
-    const here = location.pathname.split('/').pop() + location.search;
+    const hjarta = location.hash === '#hjarta';
+    const here = location.pathname.split('/').pop() + location.search + (hjarta ? '#hjarta' : '');
     const { data: { session } } = await VL.sb.auth.getSession();
     // Inloggningen gäller tills man själv loggar ut (Jock 2026-09-28: ingen veckoutloggning).
     // Äldre enheter utan sparad inloggningstid får den nu – platsdelningen hör till inloggningen.
     if (session && !VL.session.lastLogin()) VL.session.markLogin();
-    if (!session) { if (allowAnon) return null; location.replace('auth.html?next=' + encodeURIComponent(here)); return null; }
+    // #hjarta kräver inloggning även på startsidan: ett tryck på widgeten öppnar Safari, där man kan vara utloggad
+    if (!session) { if (allowAnon && !hjarta) return null; ga('auth.html?next=' + encodeURIComponent(here)); return null; }
     const prof = await VL.api.me();
     if (!prof) { await VL.session.loggaUtHar(VL.sb); location.replace('auth.html'); return null; }
     const { data: aal } = await VL.sb.auth.mfa.getAuthenticatorAssuranceLevel();

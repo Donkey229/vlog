@@ -58,6 +58,17 @@
     const langd = m => daysBetween(m.start_date, m.end_date || m.start_date);
     return tacker.sort((a, b) => langd(a) - langd(b))[0] || null;
   }
+  // Samma datum = samma händelse (Jock 2026-10-02): täcker ett minne redan dagen (eller hela den nya perioden) läggs nya bilder
+  // där i stället för i ett nytt minne bredvid – kalendern visar bara ett minne per dag. Valet görs som vid import.
+  // Privat är standard (slutgranskningen 2026-10-02): ett PRIVAT minne som täcker dagen väljs först – som importen. Bara när
+  // inget privat finns föreslås ett minne som gäster/alla ser (och då väljer man själv i rutan). Annars blev varje nytt
+  // minne en sådan dag ännu ett privat minne bredvid det privata som redan fanns.
+  function befintligtMinne(huvuden, start, slut) {
+    const s = start, e = slut && slut !== start ? slut : start;
+    const tacker = (huvuden || []).filter(m => m.start_date <= s && e <= (m.end_date || m.start_date));
+    const privata = tacker.filter(m => m.visibility === 'private');
+    return valjImportMinne(privata.length ? privata : tacker, s);
+  }
   // Lägg ihop dagar till en händelse: minnen inom två veckor före/efter som man får slå ihop (admin: alla, redaktör: egna –
   // källorna tas bort, samma regel som i databasen), i datumordning.
   function ihopKandidater(huvuden, m, prof, dagar = 14) {
@@ -73,5 +84,5 @@
     const slut = alla.map(x => x.end_date || x.start_date).sort().pop();
     return { start, slut: slut !== start ? slut : null };
   }
-  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay, valjImportMinne, ihopKandidater, nyttSpann };
+  VL.dates = { dayKey, parseDay, addDays, daysBetween, rangeDays, todayKey, parseFilenameDate, captureDate, formatRange, remapDay, valjImportMinne, befintligtMinne, ihopKandidater, nyttSpann };
 })(window.VL);

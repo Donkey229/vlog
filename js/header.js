@@ -58,7 +58,7 @@
       VL.openDialog(VL.t('red.titel_sida'), el('div', { class: 'falt' }, inp), { okText: VL.t('red.spara'), onOk: async () => { await VL.api.updateSettings({ title: inp.value.trim() || 'Emma & Jock' }); location.reload(); } });
     };
     VL.add(top, el('div', { class: 'top__varumarke' }, par), right, sok, el('nav', { class: 'flikar', 'aria-label': VL.t('nav.meny') },
-      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), redaktor ? tab('traffar', 'nav.traffar', 'traffar.html') : null, tab('om', 'nav.om', 'om.html')));
+      tab('kalender', 'nav.kalender'), tab('tidslinje', 'nav.tidslinje'), tab('resor', 'nav.resor'), tab('platser', 'nav.platser'), redaktor ? tab('traffar', 'nav.traffar', 'traffar.html') : null, redaktor ? tab('spel', 'nav.spel', 'spel.html') : null, tab('om', 'nav.om', 'om.html')));
     const aktiv = top.querySelector('.flik--pa'); if (aktiv && aktiv.scrollIntoView) aktiv.scrollIntoView({ block: 'nearest', inline: 'center' });   // vald flik syns på mobil
     VL.renderFooter(s);
     if (redaktor && VL.narvaro) VL.api.profiles().then(p => VL.narvaro.starta(prof, p)).catch(() => {});
@@ -97,6 +97,8 @@
     if (VL.narvaro) { VL.narvaro.satDela(false); if (VL.narvaro.stoppa) VL.narvaro.stoppa(); }   // (halvgammal sida: narvaro.js utan stoppa)
     if (VL.notis) await VL.notis.stangAv(true).catch(() => {});
     if (scope === 'global') await VL.api.taBortAllaPrenumerationer(prof.id);
+    // alla enheter = även iPhone-widgeten (sql/21 stang_widget). Ett fel här stoppar inte utloggningen – widgetrutan har en egen knapp.
+    if (scope === 'global' && VL.api.stangWidget) await VL.api.stangWidget().catch(e => console.warn('[widget] stäng', e));
     try { if ('clearAppBadge' in navigator) navigator.clearAppBadge(); } catch (e) {}
     await VL.sb.auth.signOut({ scope }); VL.session.clear(); ga();
   };
@@ -119,6 +121,7 @@
       redaktor ? plats : null,
       redaktor && VL.notis ? VL.notis.knapp(() => m.remove()) : null,
       redaktor && VL.notis ? VL.notis.testKnapp(() => m.remove()) : null,
+      redaktor && VL.widget ? VL.widget.knapp(() => m.remove()) : null,   // 📱 Widget på iPhone (Scriptable, gratis)
       VL.el('button', { type: 'button', role: 'menuitem', text: VL.t('nav.logga_ut'), onclick: () => ut('local') }),
       VL.el('button', { type: 'button', role: 'menuitem', class: 'fara', text: VL.t('nav.logga_ut_alla'), onclick: () => ut('global') }));
     knapp.parentNode.append(m); m.querySelector('button').focus();
