@@ -1,0 +1,125 @@
+/* Frågor & spel (spel.html, Jock 2026-10-02). Laddas efter vlogg.css och använder dess färger (--rose, --pink, --ink …).
+   Mobil först (360–430 px), ljust och mörkt läge. Kategorifärgerna: .spel-farg--<namn> sätter --kat-bg (kortets botten)
+   och --kat-fg (texten) – helt täckande färger, mätta i tests/spel.test.js till minst 4,5:1 i båda temana. */
+.spel-farg--vinrod { --kat-bg:#f8e1e8; --kat-fg:#6b1634; }
+.spel-farg--rosa   { --kat-bg:#fde6ef; --kat-fg:#8a1d4c; }
+.spel-farg--brun   { --kat-bg:#f3e7dd; --kat-fg:#5c3820; }
+.spel-farg--lila   { --kat-bg:#efe5f5; --kat-fg:#55306b; }
+.spel-farg--bla    { --kat-bg:#e2edf8; --kat-fg:#1d4776; }
+.spel-farg--gron   { --kat-bg:#e3f1e7; --kat-fg:#205638; }
+.spel-farg--guld   { --kat-bg:#f7eed6; --kat-fg:#5e460d; }
+.spel-farg--turkos { --kat-bg:#ddf1ef; --kat-fg:#135650; }
+:root[data-theme="dark"] .spel-farg--vinrod { --kat-bg:#45172a; --kat-fg:#fbe2ea; }
+:root[data-theme="dark"] .spel-farg--rosa   { --kat-bg:#4f1c39; --kat-fg:#fde3ef; }
+:root[data-theme="dark"] .spel-farg--brun   { --kat-bg:#3d2a1c; --kat-fg:#f4e4d6; }
+:root[data-theme="dark"] .spel-farg--lila   { --kat-bg:#35204a; --kat-fg:#efe2f8; }
+:root[data-theme="dark"] .spel-farg--bla    { --kat-bg:#172f4b; --kat-fg:#deebfa; }
+:root[data-theme="dark"] .spel-farg--gron   { --kat-bg:#173826; --kat-fg:#dcf2e3; }
+:root[data-theme="dark"] .spel-farg--guld   { --kat-bg:#3b3012; --kat-fg:#f8edcc; }
+:root[data-theme="dark"] .spel-farg--turkos { --kat-bg:#123835; --kat-fg:#d6f2ee; }
+
+.spel { max-width: 760px; margin: 0 auto; }
+.spel__rubrik { margin-bottom: 4px; }
+.spel__intro { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+
+/* sök + chips */
+.spel-sok { position: relative; margin-bottom: 10px; }
+.spel-sok__ikon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 18px; line-height: 1; pointer-events: none; }
+.spel-sok__falt { width: 100%; min-height: 44px; font: inherit; font-size: 16px; padding: 11px 14px 11px 40px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.spel-sok__falt::placeholder { color: var(--muted); opacity: 1; }
+.spel-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.spel-chip { min-height: 44px; padding: 8px 15px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 600; }
+.spel-chip[aria-pressed="true"] { background: var(--rose); border-color: var(--rose); color: #fff; }
+
+/* kort: kategorier och paket, två i bredd på mobil */
+.spel-kategorier, .spel-paketlista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 700px) { .spel-kategorier, .spel-paketlista { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+.spel-kat, .spel-paket, .spel-fraga, .spel-kathuvud { background: var(--kat-bg); color: var(--kat-fg); border: 1px solid color-mix(in srgb, var(--kat-fg) 16%, transparent); }
+.spel-kat, .spel-paket { position: relative; display: flex; flex-direction: column; border-radius: 18px; text-decoration: none; box-shadow: 0 6px 18px rgba(43,26,29,.08); -webkit-tap-highlight-color: transparent; }
+.spel-kat:active, .spel-paket:active { transform: scale(.98); }
+.spel-kat:focus-visible, .spel-paket:focus-visible { outline: 3px solid var(--rose); outline-offset: 2px; }
+:root[data-theme="dark"] .spel-kat, :root[data-theme="dark"] .spel-paket { box-shadow: none; }
+.spel-kat { gap: 3px; min-height: 152px; padding: 14px; }
+.spel-kat__emoji { font-size: 32px; line-height: 1; margin-bottom: 8px; }
+.spel-kat__namn { font: 600 16px/1.25 var(--sans); overflow-wrap: anywhere; }
+.spel-kat__antal { font-size: 13px; }
+.spel-kat__rad { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 8px; }
+.spel-stapel { flex: 1; height: 7px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, var(--kat-fg) 18%, transparent); }
+.spel-stapel__fyllt { display: block; height: 100%; border-radius: inherit; background: var(--kat-fg); }
+.spel-kat__procent { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.spel-vuxen { position: absolute; top: 12px; right: 12px; padding: 3px 8px; border-radius: 99px; background: var(--kat-fg); color: var(--kat-bg); font-size: 11px; font-weight: 700; letter-spacing: .02em; line-height: 1.3; }
+
+.spel-paket { gap: 8px; min-height: 172px; padding: 12px; }
+.spel-paket__topp { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.spel-paket__typ { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; line-height: 1.3; text-transform: uppercase; }
+.spel-paket__emoji { flex: 0 0 auto; font-size: 26px; line-height: 1; }
+.spel-paket__titel { font: 500 17px/1.25 var(--serif); overflow-wrap: anywhere; }
+.spel-paket__fot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.spel-paket__status { font-size: 12px; font-weight: 600; line-height: 1.3; }
+.spel-paket--din_tur .spel-paket__status { padding: 2px 8px; border-radius: 99px; background: var(--kat-fg); color: var(--kat-bg); }
+
+/* rundlarna: profilbild eller bokstav, ✓ klar, 🕒 din tur */
+.spel-rundlar { display: flex; padding: 0 4px 4px 0; }
+.spel-rundlar .spel-rundel + .spel-rundel { margin-left: -6px; }
+.av.spel-rundel { width: 30px; height: 30px; font-size: 12px; cursor: default; background: var(--kat-fg); color: var(--kat-bg); border: 2px solid var(--kat-bg); }
+.spel-rundel__marke { position: absolute; right: -6px; bottom: -6px; z-index: 1; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1.5px var(--kat-bg); }
+.spel-rundel__marke--klar { background: #1f7a45; color: #fff; }
+
+/* kategorins huvud */
+.spel-tillbaka { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin-bottom: 4px; padding: 0 12px 0 0; font-size: 14px; color: var(--muted); text-decoration: none; }
+.spel-kathuvud { position: relative; display: flex; align-items: center; gap: 12px; padding: 16px; margin-bottom: 14px; border-radius: 22px; }
+.spel-kathuvud__emoji { font-size: 38px; line-height: 1; }
+.spel-kathuvud__namn { font: 400 24px/1.15 var(--serif); padding-right: 40px; }
+.spel-kathuvud__antal { font-size: 13px; font-weight: 600; }
+
+/* paketet: en fråga i taget */
+.spel-pakethuvud { display: flex; align-items: center; gap: 10px; }
+.spel-pakethuvud__emoji { font-size: 32px; line-height: 1; }
+.spel-pakethuvud__titel { font: 400 24px/1.15 var(--serif); }
+.spel-pakethuvud__lage { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.spel-fraga { margin: 14px 0 16px; padding: 18px 18px 22px; border-radius: 22px; }
+.spel-fraga__nr { margin-bottom: 10px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.spel-fraga__text { font: 500 clamp(21px, 6vw, 26px)/1.3 var(--serif); overflow-wrap: anywhere; }
+.spel-svarsdel { display: grid; gap: 10px; }
+.spel-etikett { font-size: 14px; color: var(--muted); }
+.spel-etikett b { color: var(--ink); }
+.spel-etikett--gissa { font-weight: 600; color: var(--ink); margin-top: 4px; }
+.spel-valrad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.spel-vallista { display: grid; gap: 8px; }
+.spel-val { display: block; width: 100%; min-height: 52px; padding: 13px 16px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; font-weight: 600; line-height: 1.3; text-align: left; overflow-wrap: anywhere; }
+.spel-valrad .spel-val { min-height: 72px; text-align: center; }
+.spel-val:active { transform: scale(.98); }
+.spel-val[aria-pressed="true"] { border-color: var(--rose); background: var(--pink); color: var(--rose-text); }
+.spel-val:disabled { opacity: .6; }
+.spel-textfalt { width: 100%; min-height: 120px; resize: vertical; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.45; }
+.spel-textfalt::placeholder { color: var(--muted); opacity: 1; }
+.spel-svara { justify-self: end; min-height: 44px; padding: 11px 24px; font-size: 15px; }
+.spel-last { font-size: 12.5px; color: var(--muted); }
+
+/* svaren sida vid sida */
+.spel-svar-par { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.spel-svar { min-width: 0; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.spel-svar__vem { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-width: 0; }
+.spel-svar .av.spel-rundel { width: 26px; height: 26px; font-size: 11px; background: var(--rose); color: #fff; border-color: var(--surface); }
+.spel-svar__namn { font-size: 13px; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spel-svar__text { font-size: 16px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.spel-svar__vantar { font-size: 14px; font-style: italic; color: var(--muted); }
+.spel-svar__gissning { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.spel-lika { justify-self: center; padding: 7px 14px; border-radius: 99px; background: var(--pink); color: var(--rose-text); font-size: 15px; font-weight: 600; text-align: center; }
+.spel-dolt { font-size: 13px; color: var(--muted); text-align: center; }
+/* tryckytor minst 44 px (granskningen 2026-10-02: "Ändra mitt svar" var 20 px hög) */
+.spel-andra { justify-self: center; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; }
+.spel-klart { margin-top: 12px; text-align: center; font-weight: 600; color: var(--rose-text); }
+.spel-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.spel-nav .knapp { min-height: 44px; padding: 11px 16px; }
+.spel-nav .knapp:disabled { visibility: hidden; }
+
+/* alla svar i paketet */
+.spel-alla { list-style: none; display: grid; gap: 18px; margin-top: 16px; }
+.spel-alla__fraga { display: block; width: 100%; min-height: 44px; margin-bottom: 4px; padding: 8px 0; border: 0; background: none; color: var(--ink); font: 500 17px/1.35 var(--serif); text-align: left; }
+.spel-alla__obesvarad { color: var(--muted); }
+.spel-tom { padding: 40px 16px; }
+
+/* svaren gick inte att hämta: fel + Försök igen i stället för frågorna */
+.spel-fel { display: grid; justify-items: center; gap: 12px; margin-top: 18px; padding: 22px 16px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: center; }
+.spel-fel__igen { min-height: 44px; padding: 11px 22px; }
