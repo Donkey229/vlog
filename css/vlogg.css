@@ -2,46 +2,168 @@
 @font-face { font-family: "Geist"; font-weight: 300 600; font-display: swap; src: url(../fonts/geist-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA; }
 @font-face { font-family: "Noto Sans Thai"; font-weight: 300 600; font-display: swap; src: url(../fonts/noto-sans-thai.woff2) format("woff2"); unicode-range: U+0E01-0E5B; }
 :root { --bg:#fff; --pink:#fbe4ea; --pink2:#f4c6d3; --rose:#7d1d3f; --rose-text:#7d1d3f; --brun:#7a4b2e; --brun-text:#7a4b2e; --rosa:#c73e70; --ink:#2b1a1d; --muted:#75574f; --line:rgba(125,29,63,.14); --card:rgba(255,255,255,.9); --surface:#fff; --on-ink:#fff; --serif: Georgia, "Noto Sans Thai", serif; --sans: "Geist", "Noto Sans Thai", system-ui, sans-serif; }
+/* ==== omdesign 2026-10: gemensamma tokens (docs/specs/2026-10-02-omdesign.md §3, ordagrant ur final_tokens.css). Befintliga tokens ovan ändras INTE.
+   Varje färgpar är mätt (WCAG): siffrorna i kommentarerna är kontrasten mot sin botten. Mörka varianten står direkt under "mörkt läge". ==== */
+:root {
+  /* ytor */
+  --grupp: #f7f2f3;            /* grupperade listor (Ändra minne, inställningar); ink 14,9 · muted 5,9 · rose-text 8,9 */
+  --hennes: #fbe4ea;           /* den andras bubbla i Vi två; ink 13,7 · muted 5,4 */
+  --min-bubbla: #7d1d3f;       /* mina bubblor; vit 9,9 */
+  --brev: #5c1530;             /* text i vita lappar (hälsningen ovanför rundeln); på vit 13,1 */
+  --ok-bg: #e3f1e9; --ok-text: #1e5a3c;         /* "ni vill båda" 7,0 */
+  --kanske: #8a5a12;           /* valt "Kanske" (vit text 5,9) */
+  --moln: #2a6db0;             /* träffarnas blå (kalenderns moln), vit text 5,4 */
+  --moln-text: #1f5a94;        /* träff-blå som text på vit 7,1 / på --moln-bg 6,3 */
+  --moln-bg: #eaf2fb;
+  --flik-av: #6b5a5e;          /* ej vald flik i flikraden 6,5 */
+  --skugga-kort: 0 1px 2px rgba(43,26,29,.06), 0 8px 24px rgba(125,29,63,.08);
+  /* natt-ytan: ALLT 18+ (fråga, svar, Er plan i sängen) – samma i båda temana, används aldrig till något annat */
+  --natt-1: #2a0f1c; --natt-2: #4a1430;          /* vit 17,7 / 14,7 */
+  --natt-accent: #f093ad;                        /* på natt-2 6,6; natt-1-text på accent 8,0 */
+  --natt-dim: rgba(255,255,255,.72);             /* minsta vita för text på natten 8,2 */
+  --natt-yta: rgba(255,255,255,.08);             /* kort/fält på natten */
+  --natt-kant: rgba(255,255,255,.14);
+  /* slöja över foton: minst .62 bakom liten vit text (vit .9 → 4,8:1 över helvitt foto), .80 längst ner */
+  --sloja: 30,8,18;
+  /* ny-ring (Instagram-stil) – ritas en gång */
+  --ring: conic-gradient(from 200deg, #d4a882, #c73e70, #7d1d3f, #f093ad, #d4a882);
+  /* mått */
+  --tryck: 44px;               /* minsta tryckyta */
+  --r-kontroll: 12px; --r-lista: 16px; --r-kort: 20px; --r-blad: 24px; --r-hjalte: 28px;
+  --topp-h: 56px; --flikrad-h: 64px;             /* flikraden + env(safe-area-inset-bottom) */
+  /* rörelse – stängs av under prefers-reduced-motion (se nedan) */
+  --t-snabb: 180ms; --t-blad: 280ms; --kurva: cubic-bezier(.2,.8,.2,1);
+  /* bakgrunden (sql/26 utseende): sätts av header.js från personens val; standard = dagens utseende */
+  --bg-syn: .12;               /* hur synliga bilderna är, 0–.45 */
+  --platta: rgba(255,255,255,.88);               /* läsplattan bakom fri text när --bg-syn > gränsen */
+}
+/* thai: Georgia saknar thailändska tecken – reservtypsnittet behöver mer radavstånd (rubriker 1,05 klipper tecknen) */
+:root:lang(th) { --serif-lh: 1.45; }
+@media (prefers-reduced-motion: reduce) { :root { --t-snabb: 0ms; --t-blad: 0ms; } }
+/* ==== Gemensamma komponenter (omdesign 2026-10) – Steg 0 klistrar in blocket i site/css/vlogg.css direkt efter tokens.
+   Prefix k- så att inget krockar med befintliga klasser (.val, .etikett, .chip, .kort, .knapp finns redan och ändras inte).
+   Alla paket använder dessa; bara huvudsessionen ändrar blocket (efter granskning). Mått och färger: docs/specs/2026-10-02-omdesign.md §3–5. ==== */
+.ikon { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; vertical-align: middle; }
+.k-etikett { font: 700 11px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.k-etikett--rose { color: var(--rose-text); }
+.k-en-rad { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-tva-rader { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* kort och knappar */
+.k-kort { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-kort); box-shadow: var(--skugga-kort); padding: 16px; }
+.k-knapp { min-height: 48px; padding: 0 20px; border: 0; border-radius: 14px; background: var(--rose); color: #fff; font: 700 15px/1 var(--sans); display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; cursor: pointer; transition: transform var(--t-snabb) var(--kurva); }
+.k-knapp:active { transform: scale(.96); }
+.k-knapp--sek { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.k-knapp--liten { min-height: var(--tryck); padding: 0 16px; border-radius: 12px; font-size: 14px; }
+.k-knapp--bred { width: 100%; }
+.k-ikonknapp { position: relative; width: var(--tryck); height: var(--tryck); border: 0; border-radius: 50%; background: none; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.k-ikonknapp--yta { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.k-marke { position: absolute; top: 5px; right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--rose); color: #fff; font: 700 11px/18px var(--sans); text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+/* chips: minst 44 px höga (tryckytan = det man ser) */
+.k-chip { min-height: var(--tryck); padding: 0 14px; border: 0; border-radius: 22px; display: inline-flex; align-items: center; gap: 6px; font: 600 14px/1 var(--sans); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); white-space: nowrap; cursor: pointer; }
+.k-chip[aria-pressed="true"], .k-chip--pa { background: var(--rose); color: #fff; box-shadow: none; }
+.k-chiprad { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.k-chiprad::-webkit-scrollbar { display: none; }
+/* segment: Väg/Lista/Kalender, Meddelanden/Händelser, Dag/Utflykt/Resa */
+.k-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--grupp); border-radius: 12px; padding: 3px; gap: 3px; }
+.k-seg > button { min-height: var(--tryck); border: 0; border-radius: 10px; background: none; font: 600 14px/1 var(--sans); color: var(--muted); cursor: pointer; }
+.k-seg > button[aria-selected="true"], .k-seg > button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+/* mörkt: --surface mot --grupp var 1,05:1 – valt segment får rosa yta (3,7:1 mot plattan, vit text 4,8:1) */
+:root[data-theme="dark"] :is(.k-seg > button[aria-selected="true"], .k-seg > button[aria-checked="true"], .vag-seg > a[aria-selected="true"]) { background: var(--rosa); color: #fff; box-shadow: none; }
+/* grupperad lista (iOS-stil) */
+.k-grupp { background: var(--surface); border-radius: var(--r-lista); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.k-grupp-rubrik { display: block; margin: 22px 4px 8px; }
+.k-rad { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; min-height: 54px; padding: 10px 16px; color: inherit; text-decoration: none; }
+.k-rad + .k-rad::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; border-top: 1px solid var(--line); }
+.k-rad small { display: block; font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.k-ikonruta { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: var(--rose); }
+/* omkopplare 51×31 (role="switch") */
+.k-vaxel { position: relative; width: 51px; height: 31px; border: 0; border-radius: 16px; background: var(--line); cursor: pointer; flex: 0 0 auto; }
+.k-vaxel::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: left var(--t-snabb) var(--kurva); }
+.k-vaxel[aria-checked="true"] { background: var(--rose); }
+.k-vaxel[aria-checked="true"]::after { left: 22px; }
+.k-vaxel::before { content: ''; position: absolute; inset: -7px -2px; }   /* 45 px tryckyta på höjden */
+/* rundlar och ring (ritas en gång) */
+.k-rund { border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--rose); color: #fff; font: 400 20px/1 var(--serif); flex: 0 0 auto; object-fit: cover; }
+.k-ring { display: inline-grid; padding: 3px; border-radius: 50%; background: var(--ring); flex: 0 0 auto; animation: k-ring-in 600ms var(--kurva) 1 both; }
+/* glappet ligger INUTI rundeln (som i skissen final_bas.css) – en box-shadow utanför täckte hela ringen (granskningen 2026-10-02) */
+.k-ring > .k-rund { border: 3px solid var(--ring-glapp, var(--bg)); }
+.k-ring--sedd { background: var(--line); animation: none; }
+@keyframes k-ring-in { from { clip-path: inset(0 0 100% 0 round 50%); } to { clip-path: inset(0 0 0 0 round 50%); } }
+/* blad som glider upp */
+.k-blad { position: fixed; left: 0; right: 0; bottom: 0; top: 44px; z-index: 60; max-width: 640px; margin: 0 auto; background: var(--bg); border-radius: var(--r-blad) var(--r-blad) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,.3); display: flex; flex-direction: column; overflow: hidden; animation: k-blad-in var(--t-blad) var(--kurva) 1 both; }
+.k-blad__handtag { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 8px auto 2px; flex: 0 0 auto; }
+.k-dimma { position: fixed; inset: 0; z-index: 59; background: rgba(20,8,14,.45); }
+@keyframes k-blad-in { from { transform: translateY(100%); } to { transform: none; } }
+/* natt-ytan: ALLT 18+ och inget annat */
+.k-natt { background: radial-gradient(120% 80% at 50% 0%, var(--natt-2), var(--natt-1) 70%); color: #fff; }
+:root[data-theme="dark"] .k-natt { box-shadow: inset 0 0 0 1px var(--natt-kant); }
+.k-natt .k-etikett { color: var(--natt-accent); }
+.k-vuxen { display: inline-grid; place-items: center; height: 22px; padding: 0 7px; border-radius: 6px; background: var(--natt-accent); color: var(--natt-1); font: 800 11px/1 var(--sans); }
+/* ångra-listen (3 s) */
+.k-angra { position: relative; display: inline-flex; align-items: center; gap: 10px; padding: 0 0 0 14px; border-radius: 22px; background: var(--ink); color: var(--bg); font: 600 13px/1 var(--sans); overflow: hidden; }
+.k-angra button { min-height: var(--tryck); padding: 0 16px; border: 0; border-radius: 22px; background: var(--bg); color: var(--ink); font: 700 13px/1 var(--sans); cursor: pointer; }
+.k-angra__streck { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--natt-accent); animation: k-angra 3s linear 1 both; }
+@keyframes k-angra { from { width: 0; } to { width: 100%; } }
+/* läsplattan: text direkt på bakgrunden när bilderna syns mycket (body.lasplatta sätts av header.js) */
+body.lasplatta .k-platta { background: var(--platta); border-radius: 10px; padding: 2px 8px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+/* också sidtitlarna, vägens texter (datum · rubrik · plats), START och Höjdpunkternas texter – och listan blir ett kort
+   (spec §6.5: "listor och längre text står alltid i kort"; granskningen 2026-10-02 mätte 1,9–3,5:1 utan platta vid 45 %) */
+body.lasplatta :is(h1.stor, .vag__text, .vag__start, .hem-hojd__text) { background: var(--platta); border-radius: 10px; }
+body.lasplatta h1.stor { width: fit-content; max-width: 100%; padding: 2px 10px 4px; }
+body.lasplatta .vag__text { padding: 2px 5px 3px; }
+body.lasplatta .vag__start { padding: 2px 8px; }
+body.lasplatta .hem-hojd__text { padding: 2px 4px; }
+body.lasplatta .lista { background: var(--platta); border-radius: var(--r-kort); padding: 2px 14px 12px; }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) { body.lasplatta :is(.k-platta, h1.stor, .vag__text, .vag__start, .hem-hojd__text, .lista) { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); } }
+/* minska rörelse: av i systemet ELLER html.minska-rorelse (testerna sätter klassen) */
+@media (prefers-reduced-motion: reduce) { .k-ring, .k-blad, .k-angra__streck, .k-knapp { animation: none !important; transition: none !important; } }
+html.minska-rorelse .k-ring, html.minska-rorelse .k-blad, html.minska-rorelse .k-angra__streck, html.minska-rorelse .k-knapp { animation: none !important; transition: none !important; }
+/* ==== slut gemensamma komponenter ==== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; overflow-x: clip; }
-body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); min-height: 100vh; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); min-height: 100vh;
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }   /* viewport-fit=cover: liggande iPhone */
 a { color: inherit; }
 img, video { display: block; max-width: 100%; }
 button { font: inherit; cursor: pointer; }
-.mosaik { position: fixed; inset: 0; z-index: -2; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 160px; opacity: .2; filter: saturate(.85); }
-.mosaik img { width: 100%; height: 100%; object-fit: cover; }
-/* bilderna bakom sidan syns tydligare (Jock 2026-09-28) – toningen är ändå så tät att texten klarar 4,5:1 över ett svart eller vitt foto */
-.tona { position: fixed; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,228,238,.5) 55%, rgba(255,255,255,.65)); }
-@media (min-width: 900px) { .mosaik { grid-template-columns: repeat(8, 1fr); grid-auto-rows: 180px; } }
+/* bilderna bakom sidan (omdesignen 2026-10, paket F, spec §6.5): var och en väljer antal (Inga/1/6/12/24/40) och synlighet 0–45 %
+   (bakgrund.js sätter data-antal och --bg-syn). Ingen toning längre – siffran är det man ser. Upp till 15 % (ljust) / 20 % (mörkt)
+   klarar texten 4,5:1 över ett svart eller vitt foto; över det får korta texter läsplattan (body.lasplatta, .k-platta). */
+.mosaik { position: fixed; inset: 0; z-index: -2; display: grid; grid-template-columns: repeat(var(--bg-kol, 3), 1fr); grid-template-rows: repeat(var(--bg-rad, 4), 1fr); opacity: var(--bg-syn); filter: saturate(.85); pointer-events: none; }
+.mosaik img { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.mosaik[data-antal="1"] { --bg-kol: 1; --bg-rad: 1; }
+.mosaik[data-antal="6"] { --bg-kol: 2; --bg-rad: 3; }
+.mosaik[data-antal="12"] { --bg-kol: 3; --bg-rad: 4; }
+.mosaik[data-antal="24"] { --bg-kol: 4; --bg-rad: 6; }
+.mosaik[data-antal="40"] { --bg-kol: 5; --bg-rad: 8; }
+@media (min-aspect-ratio: 1/1) {   /* liggande skärm (dator): kolumner och rader byter plats – rutorna förblir ungefär kvadratiska */
+  .mosaik { --bg-kol: 4; --bg-rad: 3; }
+  .mosaik[data-antal="6"] { --bg-kol: 3; --bg-rad: 2; }
+  .mosaik[data-antal="12"] { --bg-kol: 4; --bg-rad: 3; }
+  .mosaik[data-antal="24"] { --bg-kol: 6; --bg-rad: 4; }
+  .mosaik[data-antal="40"] { --bg-kol: 8; --bg-rad: 5; }
+}
+.tona { display: none; }   /* den gamla toningen: borttagen (sidor som fortfarande har elementet påverkas inte) */
 
-/* topp */
-.top { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 16px 0; background: rgba(255,255,255,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
-/* logotyp: foto med ring + titel som ordbild */
-.top__varumarke { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1 1 0; }   /* basis 0: logotypen krymper (…) i stället för att raden bryts */
-.par { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: var(--ink); }
-.par__foto { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface, #fff); box-shadow: 0 0 0 2px var(--rose), 0 4px 12px rgba(125,29,63,.25); display: grid; place-items: center; color: var(--rose-text); background: var(--pink); }
-.par__titel { font: 500 clamp(18px, 5.4vw, 23px)/1 var(--serif); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.par__och { font-style: italic; font-weight: 400; color: var(--rose-text); padding: 0 .06em; }
+/* topp – omdesignen 2026-10 (paket F, spec §5): EN rad på 56 px med frostat glas: ordbilden till vänster, till höger sök · ♥ · profil.
+   Flikarna och den svävande ＋ ligger i flikraden längst ner (block F). Glaset ritas av ::before – .top själv får aldrig
+   backdrop-filter/filter/transform, för då skulle flikraden (position: fixed inuti sidhuvudet) fastna i sidhuvudet. */
+.top { position: sticky; top: 0; z-index: 20; height: var(--topp-h); display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; padding: 0 6px 0 16px; border-bottom: 1px solid var(--line); }
+.top::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(255,255,255,.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); pointer-events: none; }
+/* logotyp: titeln som ordbild */
+.top__varumarke { display: flex; align-items: center; min-width: 0; flex: 1 1 0; }   /* basis 0: ordbilden krymper (…) i stället för att raden bryts */
+.par { display: flex; align-items: center; min-width: 0; min-height: var(--tryck); text-decoration: none; color: var(--ink); }
+.par__titel { font: 400 clamp(19px, 5.6vw, 23px)/1.2 var(--serif); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.par__och { font-style: italic; font-weight: 400; color: var(--rose-text); padding: 0 .08em; }
 .par__emoji { font-size: .72em; vertical-align: .14em; margin-left: .12em; }
-.top__penna { font-size: 13px; opacity: .45; text-decoration: none; padding: 4px; }
-.top__penna:hover { opacity: 1; }
-/* flikar: en ren rad som kan skrollas i sidled, utan synlig rullist */
-.flikar { display: flex; gap: 2px; order: 4; width: calc(100% + 32px); margin: 0 -16px; padding: 2px 48px 10px 16px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; mask-image: linear-gradient(to right, #000 88%, transparent); -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); }
-.flikar::-webkit-scrollbar { display: none; }
+/* .flik finns kvar för bildflikarna (Alla · Bilder · Filmer, urval.js); flikraden har eget utseende (block F) */
 .flik { font-size: 14px; font-weight: 500; color: var(--muted); padding: 7px 13px; border-radius: 99px; text-decoration: none; white-space: nowrap; }
-.flik--pa { background: var(--ink); color: var(--on-ink); }
-.top__hoger { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.top__hoger { margin-left: auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 0; flex: 0 0 auto; position: relative; }
 .narvaro .av--narvaro + .av--narvaro { margin-left: -10px; }   /* flera partner överlappar i stället för att tränga ut logotypen */
-/* runda ikonknappar: sök och ⚙ */
-.sok-knapp, .install-knapp { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 17px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
-.sok-knapp[aria-expanded="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+/* runda ikonknappar i sidhuvudet: sök och (besökare) inställningar – 44 × 44, linjeikon */
+.sok-knapp, .install-knapp { width: var(--tryck); height: var(--tryck); border-radius: 50%; border: 0; background: none; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.sok-knapp:active, .install-knapp:active { background: var(--line); }
 .knapp--liten { padding: 7px 13px; font-size: 13px; border-radius: 99px; box-shadow: none; }
-.top__hoger .top__nytt { display: none; }   /* mobil: svävande ＋ i stället */
-/* ＋ Nytt minne: svävande knapp på mobil */
-.fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 15; width: 58px; height: 58px; border-radius: 50%; background: var(--rose); color: #fff; font-size: 32px; font-weight: 300; line-height: 1; display: grid; place-items: center; text-decoration: none; box-shadow: 0 10px 26px rgba(125,29,63,.45); }
-.fab:active { transform: scale(.94); }
-body:has(#app-tips) .fab, body:has(#notisfraga) .fab { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
-body.har-fab .fot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }   /* ＋ täcker aldrig sidfoten */
 .sprak { display: flex; border: 1px solid var(--line); border-radius: 99px; padding: 2px; background: var(--surface); }
 .sprak button { border: 0; background: none; font-size: 11px; padding: 4px 8px; border-radius: 99px; color: var(--muted); }
 .sprak button.pa { background: var(--ink); color: var(--on-ink); }
@@ -52,18 +174,11 @@ body.har-fab .fot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)
 .knapp--fara { background: #c43d3d; }
 .lank { border: 0; background: none; color: var(--muted); font-size: 13px; text-decoration: underline; }
 @media (min-width: 900px) {
-  .top { padding: 12px 28px 0; }
+  .top { padding: 0 22px 0 28px; gap: 6px; }
   .top__varumarke { flex: 0 1 auto; }
-  .flikar { width: calc(100% + 56px); margin: 0 -28px; padding: 2px 28px 10px; mask-image: none; -webkit-mask-image: none; }
-  .top .sok { order: 2; display: flex; width: auto; margin-left: auto; }   /* .top-prefix: vinner över grundregeln längre ner (dold på mobil) */
-  .top__hoger { order: 3; margin-left: 0; }
-  .sok-knapp, .fab { display: none; }
-  .top__hoger .top__nytt { display: inline-block; }
-  body.har-fab .fot { padding-bottom: 28px; }
-}
-@media (min-width: 1280px) {
-  .top { flex-wrap: nowrap; padding: 12px 28px; }
-  .flikar { order: 1; width: auto; margin: 0 0 0 12px; padding: 0; }
+  .top .sok { display: flex; flex: 0 1 280px; margin-left: auto; }   /* datorn: sökfältet syns alltid (.top-prefix: vinner över grundregeln längre ner) */
+  .top__hoger { margin-left: 0; }
+  .sok-knapp { display: none; }
 }
 
 .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 60px; }
@@ -286,6 +401,7 @@ input, textarea, select, .falt input, .falt textarea, .falt select, .kommentarfo
 .traff__topp { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .traff__nar { font-size: 13px; font-weight: 700; color: var(--rose-text); }
 .traff__knappar { display: flex; gap: 12px; }
+.traff__topp .traff__knappar .lank { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; margin: -12px 0; }   /* tryckyta 44 px utan att raden blir högre */
 .traff__titel { margin: 6px 0 4px; font-size: 20px; }
 .traff__nar-text { margin: 0 0 6px; }
 .traff__plats { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 6px; color: var(--muted); }
@@ -294,30 +410,52 @@ input, textarea, select, .falt input, .falt textarea, .falt select, .kommentarfo
 .traffar-forr { margin-top: 18px; }
 .traffar-forr summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
 .falt-rad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.vag-vaxla { margin-top: 10px; }
-.vag-behallare { margin: 14px -4px 0; }
+/* tidslinjen som väg (omdesignen 2026-10, paket e – spec §6.4): rundlar på 72 px, 205 px mellan varven, DATUM · RUBRIK · PLATS
+   under varje stopp. Vägen är 26 px ljusbrun med streckad mittlinje (#ead7c3 / mörkt #4a3626). */
+.vag-behallare { margin: 10px -4px 0; }
 .vag { position: relative; }
 .vag__svg { position: absolute; inset: 0; overflow: visible; }
-.vag__kant { fill: none; stroke: #a0724f; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
-.vag__yta { fill: none; stroke: #dcb89c; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
-.vag__mitt { fill: none; stroke: #fff8f1; stroke-width: 2.5; stroke-dasharray: 9 9; stroke-linecap: round; }
-.vag__framtid { fill: none; stroke: #dcb89c; stroke-width: 22; stroke-linecap: butt; stroke-dasharray: 16 12; opacity: .9; }
-.vag__station { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; width: 104px; color: inherit; text-decoration: none; text-align: center; z-index: 2; }
-.vag__bild { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.18); background: var(--pink); display: grid; place-items: center; font-size: 22px; color: var(--rose-text); }
-.vag__station--traff .vag__bild { background: #fff; border-style: dashed; border-color: var(--rose); }
-.vag__resa { position: absolute; top: -4px; right: 18px; background: var(--rose); color: #fff; border-radius: 99px; font-size: 12px; padding: 1px 6px; }
-.vag__text { display: flex; flex-direction: column; margin-top: 4px; line-height: 1.2; }
+.vag__kant { fill: none; stroke: #cfb08e; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
+.vag__yta { fill: none; stroke: #ead7c3; stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; }
+.vag__mitt { fill: none; stroke: #fff; stroke-width: 2; stroke-dasharray: 9 9; stroke-linecap: round; }
+.vag__framtid { fill: none; stroke: #ead7c3; stroke-width: 20; stroke-linecap: butt; stroke-dasharray: 16 12; }
+:root[data-theme="dark"] .vag__kant { stroke: #3a2a1e; }
+:root[data-theme="dark"] .vag__yta, :root[data-theme="dark"] .vag__framtid { stroke: #4a3626; }
+:root[data-theme="dark"] .vag__mitt { stroke: rgba(255,255,255,.55); }
+/* ett stopp: rundeln (78 px med ringen) ligger mitt på vägen, texten under. Hela stoppet går att trycka på (länkens ::before
+   täcker rundeln); "+ Lägg till plats" är en egen länk ovanpå. */
+.vag__station { position: absolute; transform: translate(-50%, -39px); display: flex; flex-direction: column; align-items: center; width: 104px; color: inherit; text-align: center; z-index: 2; }
+.vag__ring { width: 78px; height: 78px; --ring-glapp: var(--bg); }
+.vag__bild { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--pink); display: grid; place-items: center; font-size: 22px; color: var(--rose-text); }
+.vag__station--traff .vag__bild { margin: 3px; background: var(--moln-bg); border: 2.5px dashed var(--moln); color: var(--moln-text); }
+.vag__resa { position: absolute; top: -4px; right: 18px; background: var(--rose); color: #fff; border-radius: 99px; font-size: 12px; padding: 1px 6px; }   /* äldre märke (före omdesignen) */
+.vag__typ { position: absolute; top: -2px; left: calc(50% + 18px); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--rose); color: #fff; box-shadow: 0 0 0 2px var(--bg); z-index: 3; }
+.vag__syn { position: absolute; top: 51px; left: calc(50% + 20px); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 2px var(--bg), 0 1px 3px rgba(0,0,0,.2); z-index: 3; }
+.vag__text { display: flex; flex-direction: column; align-items: center; margin-top: 6px; line-height: 1.3; min-width: 0; max-width: 100%; }
 .vag__text small { font-weight: 700; color: var(--rose-text); font-size: 12px; }
-/* ändstationernas text har fast ytterkant (stationens kant ± 38 px = 14 px förbi mitten, före svängen); vag.js smalnar av den mot grannen */
-.vag__station--hoger .vag__text { position: relative; left: -38px; align-self: flex-end; text-align: right; align-items: flex-end; }
-.vag__station--vanster .vag__text { position: relative; left: 38px; align-self: flex-start; text-align: left; align-items: flex-start; }
-.vag__text span { font-size: 12px; overflow-wrap: anywhere; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.vag__skylt { position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #4a2a18; background: #f1dccb; padding: 0 4px; border-radius: 4px; white-space: nowrap; z-index: 1; pointer-events: none; }
-.vag__start { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #6b3f24; }
-.vag__nu { position: absolute; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: var(--rose); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(125,29,63,.35); z-index: 2; font-size: 13px; line-height: 1.1; }
-@media (min-width: 760px) { .vag__bild { width: 76px; height: 76px; } .vag__station { transform: translate(-50%, -38px); width: 130px; } .vag__text span, .vag__text small { font-size: 13px; }
-  .vag__station--hoger .vag__text { left: -52px; } .vag__station--vanster .vag__text { left: 52px; } }
-:root[data-theme="dark"] .vag__start { color: var(--brun-text); }   /* START står bredvid vägen på mörk botten; skyltarna på vägen behåller sin mörka text */
+.vag__lank { display: flex; flex-direction: column; align-items: inherit; width: 100%; color: inherit; text-decoration: none; min-width: 0; max-width: 100%; border-radius: 6px; }
+.vag__lank::before { content: ''; position: absolute; top: 0; left: calc(50% - 39px); width: 78px; height: 78px; border-radius: 50%; }
+.vag__lank:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+.vag__text .vag__datum { font: 700 11px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--rose-text); }
+.vag__titel { width: 100%; font: 600 14px/1.3 var(--sans); color: var(--ink); overflow-wrap: anywhere; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vag__plats { display: flex; align-items: center; justify-content: inherit; gap: 3px; max-width: 100%; font: 500 12px/1.45 var(--sans); color: var(--muted); }
+.vag__plats > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.vag__lagg-plats { position: relative; z-index: 3; display: inline-flex; align-items: center; min-height: 44px; margin: -11px 0; padding: 0 4px; color: var(--rose-text); font: 600 12px/1.3 var(--sans); text-decoration: none; white-space: nowrap; }
+/* ändstationernas text har fast ytterkant (stationens kant ± 38 px = 14 px förbi mitten, före svängen); vag.js smalnar av den mot
+   grannen. Marginaler i stället för position, så att länkens ::before fortfarande täcker rundeln. */
+.vag__station--hoger .vag__text { align-self: flex-end; margin: 6px 38px 0 -120px; text-align: right; align-items: flex-end; }
+.vag__station--vanster .vag__text { align-self: flex-start; margin: 6px -120px 0 38px; text-align: left; align-items: flex-start; }
+.vag__station--hoger .vag__plats { justify-content: flex-end; } .vag__station--vanster .vag__plats { justify-content: flex-start; }
+/* högerställd text tappar radklippningens … i Chrome – rubriken i högra änden är därför en vänsterställd ruta som ligger mot höger */
+.vag__station--hoger .vag__titel { width: fit-content; max-width: 100%; text-align: left; }
+.vag__skylt { position: absolute; transform: translate(-50%, -50%); padding: 2px 4px; border-radius: 8px; background: var(--surface); border: 1.5px solid var(--brun-text); color: var(--brun-text); font: 700 11px/14px var(--sans); letter-spacing: .06em; white-space: nowrap; z-index: 1; pointer-events: none; }
+.vag__start { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #6b3f24; white-space: nowrap; }
+/* NU: rundel på 72 px i vinrött med halo, "NU ♥", datumet och dagarna tillsammans under */
+.vag__nu { position: relative; width: 72px; height: 72px; margin: 3px; border-radius: 50%; background: var(--rose); color: #fff; display: grid; place-items: center; align-content: center; gap: 2px; box-shadow: 0 0 0 8px rgba(125,29,63,.22); font: 700 15px/1 var(--sans); z-index: 2; }
+.vag__station--nu .vag__titel { font-weight: 600; }
+@media (min-width: 760px) { .vag__station { width: 130px; }
+  .vag__station--hoger .vag__text { margin-right: 52px; } .vag__station--vanster .vag__text { margin-left: 52px; } }
+:root[data-theme="dark"] .vag__start { color: var(--brun-text); }   /* START står bredvid vägen på mörk botten */
 .galleri-flikar { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
 .galleri-flikar .flik { border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
 .galleri-flikar .flik.pa { background: var(--rose); color: #fff; border-color: var(--rose); }
@@ -341,18 +479,29 @@ input, textarea, select, .falt input, .falt textarea, .falt select, .kommentarfo
 
 /* mörkt läge */
 :root[data-theme="dark"] { --bg:#16101a; --pink:#2e1a22; --pink2:#4f2636; --rose:#a3345a; --rose-text:#f093ad; --brun:#8b5a3a; --brun-text:#d4a882; --rosa:#c73e70; --ink:#f3e8ee; --muted:#c4aca6; --line:rgba(240,147,173,.16); --card:rgba(34,24,31,.92); --surface:#21171f; --on-ink:#16101a; }
-:root[data-theme="dark"] .tona { background: linear-gradient(180deg, rgba(22,16,26,.35), rgba(43,29,39,.35) 55%, rgba(22,16,26,.55)); }
-:root[data-theme="dark"] .top { background: rgba(22,16,26,.86); }
-:root[data-theme="dark"] .mosaik { opacity: .2; }
+/* omdesign 2026-10: nya tokens i mörkt läge (ur final_tokens.css) – de befintliga på raden ovan ändras inte */
+:root[data-theme="dark"] {
+  --grupp: #1d151b;            /* ink 15,0 · muted 8,3 */
+  --hennes: #3a2430;           /* ink 11,9 · muted 6,6 */
+  --min-bubbla: #a3345a;       /* vit 6,6 */
+  --ok-bg: #183526; --ok-text: #a8e0c0;          /* 8,9 */
+  --moln-text: #9cc6f0; --moln-bg: #172433;      /* 10,5 / 8,8 */
+  --flik-av: #a8969b;          /* 6,7 */
+  --skugga-kort: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  --natt-kant: rgba(240,147,173,.25);            /* natten ligger nära sidans svarta botten – kanten skiljer dem */
+  --platta: rgba(22,16,26,.88);
+}
+:root[data-theme="dark"] .top::before { background: rgba(22,16,26,.9); }   /* mosaiken: samma --bg-syn som i ljust läge (personens val) */
 :root[data-theme="dark"] .knapp--sekundar { color: var(--ink); }
 :root[data-theme="dark"] .meny .fara { color: #ff8a80; }   /* ljusare röd: #c43d3d syns dåligt på den mörka menyn */
 
-/* meny: sök och tema */
-.sok { display: none; order: 3; width: 100%; align-items: center; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); overflow: hidden; }
+/* meny: sök och tema – sök på mobil: fältet tar ordbildens plats på samma rad (sidhuvudet växer aldrig), ✕ stänger */
+.sok { display: none; flex: 1 1 auto; min-width: 0; height: 44px; align-items: center; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); overflow: hidden; }
+.top--sok .top__varumarke, .top--sok .narvaro { display: none; }
 .top--sok .sok { display: flex; }
-.sok input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 16px; padding: 9px 14px; outline: none; }
-@media (min-width: 900px) { .sok input { flex: 0 0 auto; width: 170px; font-size: 13px; padding: 7px 12px; } }
+.sok input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--ink); font: inherit; font-size: 16px; padding: 0 4px 0 14px; outline: none; }
 .sok button, .tema { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 4px 10px; }
+.sok button { height: 100%; min-width: 40px; display: grid; place-items: center; }
 .tema { border: 1px solid var(--line); border-radius: 99px; background: var(--surface); }
 
 
@@ -404,8 +553,7 @@ input, textarea, select, .falt input, .falt textarea, .falt select, .kommentarfo
 .notisfraga p { flex: 1 1 200px; margin: 0; }
 .notisfraga div { display: flex; gap: 8px; }
 button.av { border: 0; cursor: pointer; }
-.top__hoger { position: relative; }
-.meny--profil { top: 46px; right: 0; }
+.meny--profil { top: calc(100% + 6px); right: 0; }
 
 /* Närvaro uppe till höger: partnerns profil med grön prick när hon/han är inne i appen */
 .narvaro { display: flex; gap: 6px; position: relative; }
@@ -425,78 +573,11 @@ button.av { border: 0; cursor: pointer; }
 .platslista a:hover { border-color: var(--rose); }
 .platslista small { color: var(--muted); }
 
-/* Hjärtat (Jock 2026-09-28): stora vita hjärtat överst på startsidan med den andras senaste reaktion inuti,
-   eget foto genomskinligt på mörk mjuk botten, puls tills man läst. Hjärtat i sidhuvudet ersätter klockan 🔔. */
-.hjarta-hero { position: relative; isolation: isolate; overflow: hidden; margin: 14px 0 22px; border-radius: 26px; min-height: 330px; display: grid; place-items: center; padding: 22px 12px;
-  background: radial-gradient(ellipse at 50% 35%, #5a1a33 0%, #2c0f1b 62%, #1b0a11 100%); box-shadow: 0 18px 50px rgba(43,10,24,.35); }
-.hjarta-hero__bild { position: absolute; inset: 0; z-index: -2; background: center / cover no-repeat; opacity: .8; }
-.hjarta-hero--bild::after { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 45%, rgba(27,10,17,.05), rgba(27,10,17,.42) 78%); }
-.hjarta-hero__byt { position: absolute; right: 10px; bottom: 10px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 17px; cursor: pointer; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.hjarta-stort { position: relative; width: min(290px, 80vw); aspect-ratio: 100 / 90; border: 0; padding: 0; background: none; cursor: pointer; color: var(--ink); -webkit-tap-highlight-color: transparent; }
-.hjarta-stort__form { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 26px rgba(0,0,0,.35)); }
-.hjarta-stort__form path { fill: #fff; }
-.hjarta-stort__inne { position: absolute; inset: 14% 18% 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; color: #2b1a1d; }
-.hjarta-stort__emoji { font-size: clamp(38px, 12vw, 52px); line-height: 1.1; }
-.hjarta-stort__text { font: 600 16px/1.25 var(--sans); color: #5c1530; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
-.hjarta-stort__text--tom { font-weight: 500; font-size: 14px; }
-.hjarta-stort__tid { font-size: 12px; color: #6b4a44; }
-.hjarta-stort__ny { position: absolute; top: 9%; right: 13%; background: var(--rosa); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 2px 8px; letter-spacing: .03em; }
-.hjarta-stort--olast { animation: hjartslag 1.6s ease-in-out infinite; }
-.hjarta-stort--olast .hjarta-stort__form { filter: drop-shadow(0 0 22px rgba(255,190,210,.75)) drop-shadow(0 10px 26px rgba(0,0,0,.35)); }
-@keyframes hjartslag { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.05); } }
-.hjarta-stort:focus-visible { outline: 3px solid #fff; outline-offset: 6px; border-radius: 30px; }
-@media (min-width: 760px) { .hjarta-hero { min-height: 380px; } .hjarta-stort { width: 330px; } }
-@media (prefers-reduced-motion: reduce) { .hjarta-stort--olast { animation: none; } }
-/* Räknaren direkt under hjärtat (Emma 2026-10-02): "💞 97 dagar tillsammans" + "📍 Om 29 dagar · …" (nästa träff).
-   Träffen är en länk: vit text på egen mörk "knapp"-botten – över ett helt vitt foto ändå ≈ 6:1. Dagarna går inte att trycka på
-   och ser därför inte ut som en knapp (granskningen 2026-10-02): ren vit fet text med en tät mörk kant som håller den läsbar
-   över ett ljust foto. Nederkanten lämnar plats åt 🖼-knappen. En lång träfftitel kortas med … – nedräkningen syns alltid hel. */
-.hjarta-hero { align-content: center; row-gap: 10px; }
-.hjarta-raknare { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; min-width: 0; margin-bottom: 30px; }
-.hjarta-raknare__rad { display: flex; align-items: center; column-gap: .3em; max-width: 100%; min-width: 0; margin: 0; color: #fff; font: 600 15px/1.3 var(--sans); text-decoration: none; text-align: center; }
-.hjarta-raknare__dagar { padding: 2px 8px; font-size: 16px; font-weight: 700; cursor: default;
-  text-shadow: 0 1px 2px rgba(27,10,17,.95), 0 0 3px rgba(27,10,17,.9), 0 0 10px rgba(27,10,17,.75); }
-.hjarta-raknare__traff { min-height: 44px; padding: 8px 15px; border-radius: 99px; background: rgba(27,10,17,.66); cursor: pointer; -webkit-tap-highlight-color: transparent;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 4px 14px rgba(0,0,0,.2); }
-.hjarta-raknare__traff:hover, .hjarta-raknare__traff:focus-visible { background: rgba(27,10,17,.8); }
-.hjarta-raknare__traff:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-.hjarta-raknare__nar { flex: none; white-space: nowrap; }
-.hjarta-raknare__titel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-
+/* Hjärtat i sidhuvudet (Jock 2026-09-28: klockan 🔔 blev ett ♥ med antal olästa) – trycket öppnar Vi två-bladet.
+   Stora hjärtat på fotot, räknaren under det och hjärtats ruta med nio stora knappar ersattes 2026-10 av Vi två-kortet
+   och Vi två-bladet (omdesignen, paket d: block D längst ner). Fotovalet bakom kortet (VL.hjarta.valjBakgrund) finns kvar. */
 .klocka__hjarta { display: block; width: 23px; height: 21px; overflow: visible; }
 .klocka__hjarta path { fill: var(--rose-text); }
-
-.hjarta-ark { padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
-@media (max-width: 699px) { .hjarta-ark { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 22px 22px 0 0; max-height: 92vh; } }
-.hjarta-ark__topp { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.hjarta-ark__topp h2 { display: flex; align-items: center; gap: 10px; margin: 0; }
-.hjarta-ark__ikon { width: 26px; height: 24px; } .hjarta-ark__ikon path { fill: var(--rose-text); }
-.hjarta-ark__stang { border: 0; background: var(--pink); color: var(--ink); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; }
-.hjarta-ark__rubrik { font-weight: 700; margin: 14px 0 8px; font-size: 14px; }
-.hjarta-historik { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow-y: auto; padding: 8px; border-radius: 16px; background: var(--pink); overscroll-behavior: contain; }
-.hjarta-historik__tom { margin: 6px; }
-.bubbla { max-width: 82%; padding: 7px 12px 6px; border-radius: 16px; display: flex; flex-direction: column; gap: 2px; }
-.bubbla__text { font-size: 15px; overflow-wrap: anywhere; }
-.bubbla small { font-size: 11px; opacity: .8; }
-.bubbla--min { align-self: flex-end; background: var(--rose); color: #fff; border-bottom-right-radius: 5px; }
-.bubbla--hennes { align-self: flex-start; background: var(--surface); color: var(--ink); border-bottom-left-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-.hjarta-snabbval { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.snabbval { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 12px/1.2 var(--sans); cursor: pointer; }
-.snabbval__emoji { font-size: 24px; line-height: 1.1; }
-.snabbval:active { transform: scale(.96); } .snabbval:disabled { opacity: .5; }
-.hjarta-egen { margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
-.hjarta-egen summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
-.hjarta-palett { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
-.hjarta-palett button { width: 38px; height: 38px; border: 1px solid transparent; border-radius: 10px; background: var(--pink); font-size: 20px; cursor: pointer; }
-.hjarta-palett button[aria-pressed="true"] { border-color: var(--rose); box-shadow: 0 0 0 1px var(--rose); }
-.hjarta-egen__rad { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.hjarta-egen__emoji { width: 64px; text-align: center; font-size: 20px; }
-.hjarta-egen__text { flex: 1; min-width: 0; }
-.hjarta-egen__emoji, .hjarta-egen__text { padding: 9px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font-size: 16px; }
-.hjarta-egen__raknare { flex: 1; color: var(--muted); } .hjarta-egen__raknare.over { color: #c43d3d; font-weight: 700; }
-.hjarta-egen__fel { color: #c43d3d; font-size: 13px; min-height: 1em; margin-top: 6px; }
-:root[data-theme="dark"] .hjarta-egen__fel, :root[data-theme="dark"] .hjarta-egen__raknare.over { color: #ff8a80; }
-.hjarta-handelser .klocka__lista { max-height: none; }
 .bakgrund-val { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 60vh; overflow-y: auto; }
 .bakgrund-val button { aspect-ratio: 1; border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: var(--pink); cursor: pointer; }
 .bakgrund-val img { width: 100%; height: 100%; object-fit: cover; }
@@ -656,3 +737,544 @@ main.admin .knapp--liten, main.admin .knapp--sekundar { box-shadow: none; }
 main.admin .knapp:disabled { box-shadow: none; }
 .admin-kat .falt { width: 100%; }
 @media (min-width: 900px) { .admin-personer { align-items: start; } .admin-person--admin { grid-column: 1 / -1; } }
+
+/* ==== D: Hem och Vi två ==== */
+/* Omdesignen 2026-10, paket d (docs/specs/2026-10-02-omdesign.md §6.1–6.2). Mått och färger enligt §3 och §5; textparen är
+   mätta i tests/hem.test.js och tests/vitva.test.js (≥ 4,5:1 i båda temana, även över ett helvitt och ett helsvart foto). */
+
+/* --- Hem: en spalt med kort, 12 px från skärmkanten på telefonen --- */
+.hem { display: flex; flex-direction: column; gap: 16px; margin: 0 -4px; }
+@media (min-width: 640px) { .hem { max-width: 600px; margin: 0 auto; } }
+.hem-dagens:empty { display: none; }
+.hem-rubrik { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; }
+.hem-rubrik h2 { min-width: 0; font: 400 22px/1.25 var(--serif); color: var(--ink); }
+.hem-rubrik a { display: inline-flex; align-items: center; justify-content: flex-end; min-height: var(--tryck); min-width: var(--tryck); padding: 0 4px 0 12px;
+  font: 600 14px/1.3 var(--sans); color: var(--rose-text); text-decoration: none; white-space: nowrap; }
+
+/* --- Vi två-kortet: det egna fotot (eller en vinröd toning) under slöjan; all text är vit eller står i vita lappar --- */
+.hem-vitva { --ring-glapp: #3b1424; position: relative; isolation: isolate; overflow: hidden; max-height: 400px; border-radius: var(--r-hjalte); color: #fff;
+  box-shadow: 0 12px 32px rgba(43,10,24,.28); }
+.hem-vitva__foto { position: absolute; inset: 0; z-index: -2; background: linear-gradient(160deg, #8a2348 0%, #7d1d3f 45%, #5a2f1f 100%) center / cover no-repeat; }
+/* slöjan: minst .62 bakom liten vit text (vit .9 → 4,8:1 över ett helvitt foto), tätare längst ner där siffrorna står */
+.hem-vitva::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(var(--sloja),.62) 0%, rgba(var(--sloja),.64) 55%, rgba(var(--sloja),.82) 100%); }
+.hem-vitva__topp { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 10px 0 14px; }
+.hem-milstolpe { display: inline-block; min-width: 0; max-width: calc(100% - 52px); padding: 7px 12px; border-radius: 16px; background: rgba(var(--sloja),.35);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); font: 600 13px/1.4 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hem-glas { flex: 0 0 auto; margin-left: auto; background: rgba(var(--sloja),.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); color: #fff; }
+/* två personer och hjärtat i ett rutnät (lapp / rundel / namn): rundlarna och hjärtat står alltid på samma höjd */
+.hem-duo { display: grid; grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr); grid-template-rows: auto auto auto; row-gap: 8px;
+  align-items: center; justify-items: center; padding: 6px 12px 0; }
+.hem-person { display: contents; }
+.hem-person--andra > * { grid-column: 1; }
+.hem-person--jag > * { grid-column: 3; }
+.hem-lapp { grid-row: 1; align-self: end; position: relative; max-width: 100%; padding: 8px 11px 7px; border-radius: 16px; background: #fff; color: var(--brev);
+  box-shadow: 0 6px 16px rgba(0,0,0,.25); text-align: left; }
+.hem-lapp::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 12px; height: 12px; background: inherit; border-radius: 2px; transform: translateX(-50%) rotate(45deg); }
+.hem-lapp__text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 14px/1.25 var(--sans); color: var(--brev); overflow-wrap: anywhere; }
+.hem-lapp__tid { display: block; margin-top: 2px; font: 500 12px/1.3 var(--sans); color: #75574f; overflow-wrap: anywhere; }   /* får bryta: 360 px gick "du · för 23 min sedan" ut i kanten */
+.hem-lapp--tom .hem-lapp__text { -webkit-line-clamp: 3; font-weight: 500; color: #75574f; }   /* tomläget får en rad till: "Skicka dagens första hälsning ♥" ska synas helt */
+.hem-rundram { grid-row: 2; display: inline-grid; padding: 3px; border-radius: 50%; background: transparent; }   /* ring bara när något är nytt */
+.hem-rundram.k-ring { background: var(--ring); }
+.hem-rund { width: 72px; height: 72px; font-size: 28px; }
+.hem-namn { grid-row: 3; align-self: start; max-width: 100%; font: 600 15px/1.25 var(--sans); text-align: center; overflow-wrap: anywhere; }
+.hem-namn__tid { display: block; font: 500 12px/1.3 var(--sans); color: rgba(255,255,255,.9); }
+.hem-mitt { grid-column: 2; grid-row: 2; position: relative; display: grid; place-items: center; width: 72px; height: 72px; }
+.hem-mitt::before { content: ''; position: absolute; left: -20px; right: -20px; top: 50%; border-top: 2px dashed rgba(255,255,255,.45); }
+.hem-hjarta { position: relative; z-index: 1; width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%; background: none; color: #fff; display: grid; place-items: center;
+  cursor: pointer; filter: drop-shadow(0 4px 10px rgba(0,0,0,.35)); -webkit-tap-highlight-color: transparent; }
+.hem-hjarta .ikon { width: 60px; height: 60px; fill: #fff; stroke: #fff; }
+.hem-hjarta .k-marke { top: 2px; right: -4px; box-shadow: 0 0 0 2px #fff; }
+.hem-hjarta:focus-visible, .hem-snabb button:focus-visible, .hem-glas:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+/* snabbraden: fyra emoji (48×46) och Svara; ångra-listen tar dess plats i 3 s */
+.hem-snabb { display: grid; grid-template-columns: repeat(4, 48px) minmax(0, 1fr); gap: 8px; padding: 12px 16px 0; }
+.hem-snabb__knapp { height: 46px; padding: 0; border: 0; border-radius: 14px; background: rgba(var(--sloja),.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+  font-size: 22px; line-height: 1; color: #fff; }
+.hem-svara { height: 46px; min-width: 0; padding: 0 10px; border: 0; border-radius: 14px; background: #fff; color: #7d1d3f; font: 700 15px/1.2 var(--sans); }
+.hem-angra { display: flex; justify-content: center; padding: 12px 16px 0; }
+.hem-angra:empty { display: none; }
+.hem-angra .k-angra { max-width: 100%; }
+/* sifferraden: dagar ihop · dagar kvar · minnen */
+.hem-siffror { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 12px 16px 0; padding: 8px 0 10px; border-top: 1px solid rgba(255,255,255,.22); text-align: center; }
+.hem-siffra b { display: block; font: 400 24px/1.15 var(--serif); }
+.hem-siffra span { display: block; font: 500 12px/1.3 var(--sans); color: rgba(255,255,255,.9); }
+
+/* --- Nästa träff: eget kort med 4 px träff-blå överkant (text står aldrig på ett foto) --- */
+.hem-traff { border-top: 4px solid var(--moln); }
+.hem-traff__lank { display: block; color: inherit; text-decoration: none; }
+.hem-traff__etikett { display: block; color: var(--moln-text); }
+.hem-traff__nedrakning { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.hem-traff__nedrakning b { font: 400 40px/1.1 var(--serif); color: var(--ink); }
+.hem-traff__nedrakning span { font: 600 16px/1.3 var(--sans); }
+.hem-traff__nedrakning .hem-traff__idag { font: 400 28px/1.2 var(--serif); }
+.hem-traff__titel { display: block; margin-top: 8px; font: 600 15px/1.35 var(--sans); }
+.hem-traff__plats { display: flex; align-items: center; gap: 4px; min-width: 0; margin-top: 2px; font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.hem-traff__plats .k-en-rad { min-width: 0; }
+.hem-resa { position: relative; display: block; height: 6px; margin: 16px 0 6px; border-radius: 3px; background: var(--moln-bg); }
+.hem-resa i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, #9cc6f0, var(--moln)); }
+.hem-resa__text { display: flex; justify-content: space-between; gap: 8px; font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.hem-traff__infor { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.hem-traff__infor p, .hem-traff--tom p { flex: 1; min-width: 0; font: 600 14px/1.35 var(--sans); }
+.hem-traff__infor small, .hem-traff--tom small { display: block; font: 500 12px/1.35 var(--sans); color: var(--muted); }
+.hem-traff--tom { display: flex; align-items: center; gap: 12px; }
+.hem-traff__ikon { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--moln-bg); color: var(--moln-text); }
+.hem-traff--laddar { min-height: 150px; }
+.hem-skelett { display: block; width: 45%; height: 12px; border-radius: 6px; background: var(--grupp); }
+.hem-skelett--stor { width: 60%; height: 40px; margin-top: 12px; }
+
+/* --- Höjdpunkter: rundlar på 64 px i en rad som går att svepa --- */
+.hem-hojd__rad { display: flex; gap: 10px; overflow-x: auto; padding: 8px 4px 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.hem-hojd__rad::-webkit-scrollbar { display: none; }
+.hem-hojd__punkt { flex: 0 0 84px; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: inherit; text-decoration: none; text-align: center; }
+.hem-hojd__ring .k-rund { width: 64px; height: 64px; font-size: 24px; }
+.hem-hojd__ring--forr { background: conic-gradient(from 200deg, #f5c04a, #ef8a3c, #e35d3a, #f5c04a); }
+.hem-hojd__text { display: block; width: 100%; min-width: 0; }
+.hem-hojd__text b { display: block; font: 600 12px/1.35 var(--sans); }
+.hem-hojd__text small { font: 500 12px/1.35 var(--sans); color: var(--muted); }   /* högst två rader (k-tva-rader) */
+
+/* --- Den här veckan: rutnät 3×n, rosa prick på osedda, ▶ på filmer --- */
+.hem-vecka__rutor { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; margin-top: 8px; border-radius: 16px; overflow: hidden; }
+.hem-vecka__ruta { position: relative; display: block; aspect-ratio: 1; background: var(--grupp); }
+.hem-vecka__ruta img { width: 100%; height: 100%; object-fit: cover; }
+.hem-vecka__ruta--ny::after { content: ''; position: absolute; top: 7px; right: 7px; width: 10px; height: 10px; border-radius: 50%; background: #f093ad; box-shadow: 0 0 0 2px #fff; }
+.hem-vecka__film { position: absolute; left: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(20,8,14,.66); color: #fff; font-size: 11px; line-height: 1; }
+
+/* thai: Georgia saknar thailändska tecken – reservtypsnittet behöver mer radavstånd (annars klipps tecknen ovanför och under) */
+:root:lang(th) .hem-lapp__text, :root:lang(th) .hem-namn, :root:lang(th) .hem-hojd__text b, :root:lang(th) .hem-hojd__text small,
+:root:lang(th) .hem-traff__titel, :root:lang(th) .hem-rubrik h2, :root:lang(th) .hem-milstolpe, :root:lang(th) .hem-svara { line-height: 1.5; }
+
+/* --- Vi två-bladet: en riktig chatt i ett blad som glider upp (k-blad) --- */
+/* dialogens egna mått (bredd/höjd efter innehållet, ram, marginal) ersätts; höjden följer den synliga ytan när tangentbordet är uppe */
+dialog.vitva-blad { top: var(--vitva-y, 44px); bottom: auto; width: 100%; height: var(--vitva-h, calc(100% - 44px)); max-height: none; padding: 0; border: 0; color: var(--ink); }
+dialog.vitva-blad::backdrop { background: rgba(20,8,14,.45); }
+:root[data-theme="dark"] .vitva-blad .k-blad__handtag { background: rgba(255,255,255,.25); }
+.vitva-blad .k-blad__handtag { touch-action: none; }
+.vitva-huvud { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; padding: 6px 12px 10px 16px; touch-action: none; }
+.vitva-huvud__rund { display: inline-grid; padding: 3px; border-radius: 50%; }
+.vitva-huvud__text { flex: 1; min-width: 0; }
+.vitva-namn { font: 400 23px/1.2 var(--serif); color: var(--ink); overflow-wrap: anywhere; }
+.vitva-klocka { display: block; font: 500 12px/1.4 var(--sans); color: var(--muted); }
+.vitva-seg { flex: 0 0 auto; margin: 0 16px; }
+.vitva-seg__antal { position: static; display: inline-block; margin-left: 6px; vertical-align: 1px; box-shadow: none; }
+.vitva-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* rundlar: profilbilden över bokstaven */
+.vitva-rund { position: relative; }
+.vitva-rund__bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.vitva-rund--40 { width: 40px; height: 40px; font-size: 18px; }
+/* tråden */
+.vitva-trad { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 3px; padding: 6px 16px 10px; }
+.vitva-trad > :first-child { margin-top: auto; }
+.vitva-dag { align-self: center; margin: 14px 0 8px; }
+.vitva-bubbla { max-width: 78%; padding: 10px 14px; border-radius: 20px; font: 500 15px/1.35 var(--sans); overflow-wrap: anywhere; }
+.vitva-bubbla--hennes { align-self: flex-start; background: var(--hennes); color: var(--ink); border-bottom-left-radius: 6px; }
+.vitva-bubbla--min { align-self: flex-end; background: var(--min-bubbla); color: #fff; border-bottom-right-radius: 6px; }
+.vitva-bubbla--min + .vitva-bubbla--min { border-top-right-radius: 6px; }
+.vitva-bubbla--hennes + .vitva-bubbla--hennes { border-top-left-radius: 6px; }
+.vitva-emoji { align-self: flex-start; padding: 2px 4px; font-size: 46px; line-height: 1.15; }
+.vitva-emoji--min { align-self: flex-end; }
+.vitva-tid { align-self: flex-start; margin: 2px 4px 6px; font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.vitva-tid--min { align-self: flex-end; }
+.vitva-fragekort { align-self: stretch; display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 2px 4px 2px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--grupp); }
+.vitva-fragekort__ikon { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--pink); color: var(--rose-text); }
+.vitva-fragekort p { flex: 1; min-width: 0; font: 600 13px/1.35 var(--sans); }
+.vitva-fragekort b { display: block; }
+.vitva-fragekort small { display: block; font: 500 12px/1.35 var(--sans); color: var(--muted); }
+.vitva-fragekort a { display: inline-flex; align-items: center; min-height: var(--tryck); padding: 0 10px; font: 600 13px/1.2 var(--sans); color: var(--rose-text); text-decoration: none; white-space: nowrap; }
+.vitva-trad > .k-angra { align-self: flex-end; flex: 0 0 auto; margin-top: 6px; }
+.vitva-tom { margin: auto; padding: 24px 8px; text-align: center; font: 500 14px/1.45 var(--sans); color: var(--muted); }
+/* snabbvalen, paletten och skrivraden */
+.vitva-snabbval { flex: 0 0 auto; padding: 8px 16px 6px; }
+.vitva-snabbval .k-chip:disabled { opacity: .5; cursor: default; }
+.vitva-palett { flex: 0 0 auto; max-height: 38vh; overflow-y: auto; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--grupp); }
+.vitva-palett__rutor { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; }
+.vitva-palett__emoji { width: 100%; min-width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: none; font-size: 22px; line-height: 1; }
+.vitva-palett__emoji[aria-pressed="true"] { background: var(--pink); box-shadow: inset 0 0 0 2px var(--rose); }
+.vitva-palett__klar { display: flex; margin: 8px 0 0 auto; }
+.vitva-skriv { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.vitva-falt { flex: 1; min-width: 0; height: var(--tryck); padding: 0 16px; border: 1px solid var(--line); border-radius: 22px; background: var(--grupp); color: var(--ink); font: 400 16px/1.2 var(--sans); }
+.vitva-falt::placeholder { color: var(--muted); opacity: 1; }
+.vitva-emojiknapp__val { font-size: 18px; line-height: 1; letter-spacing: -2px; }
+.vitva-raknare { flex: 0 0 auto; min-width: 2ch; font: 600 12px/1 var(--sans); color: var(--muted); text-align: right; }
+.vitva-raknare--over, .vitva-fel { color: #b3261e; }
+:root[data-theme="dark"] .vitva-raknare--over, :root[data-theme="dark"] .vitva-fel { color: #ff8a80; }
+.vitva-skicka { flex: 0 0 auto; width: var(--tryck); height: var(--tryck); padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; }
+.vitva-skicka--hjarta { background: var(--pink); color: var(--rose-text); }
+.vitva-skicka--hjarta .ikon { fill: currentColor; }
+.vitva-skicka--pil { background: var(--rose); color: #fff; }
+.vitva-skicka:disabled { opacity: .6; }
+.vitva-fel { flex: 0 0 auto; padding: 0 16px 8px; font: 600 13px/1.35 var(--sans); }
+.vitva-fel:empty { display: none; }
+/* Händelser: NYA och TIDIGARE, rosa prick för oläst */
+.vitva-handelser__lista { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 8px; }
+.vitva-handelser__rubrik { display: block; margin: 16px 0 6px; }
+.vitva-hrad { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) 48px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line);
+  color: inherit; text-decoration: none; }
+.vitva-hrad--ny::before { content: ''; position: absolute; left: -11px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--rosa); }
+.vitva-hrad p { font: 400 14px/1.35 var(--sans); overflow-wrap: anywhere; }
+.vitva-hrad b { font-weight: 650; }
+.vitva-hrad small { display: block; margin-top: 2px; font: 500 12px/1.35 var(--sans); color: var(--muted); }
+.vitva-hrad__tumme { width: 48px; height: 48px; border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
+.vitva-hrad__tumme img { width: 100%; height: 100%; object-fit: cover; }
+.vitva-hrad__tumme--ikon { background: var(--pink); color: var(--rose-text); }
+.vitva-hrad__tumme--traff { background: var(--moln-bg); color: var(--moln-text); }
+.vitva-handelser__fot { flex: 0 0 auto; display: grid; gap: 4px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.vitva-notislank { min-height: var(--tryck); border: 0; background: none; font: 600 14px/1.3 var(--sans); color: var(--rose-text); }
+:root:lang(th) .vitva-bubbla, :root:lang(th) .vitva-hrad p, :root:lang(th) .vitva-namn, :root:lang(th) .vitva-fragekort p { line-height: 1.5; }
+
+/* --- rörelse bara som återkoppling, aldrig i evighet; av vid "minska rörelse" (systemet eller html.minska-rorelse) --- */
+.hem-snabb__knapp, .hem-svara, .hem-hjarta { transition: transform var(--t-snabb) var(--kurva); }
+.hem-snabb__knapp:active, .hem-svara:active, .hem-hjarta:active { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .hem *, .vitva-blad, .vitva-blad * { animation: none !important; transition: none !important; } }
+html.minska-rorelse .hem *, html.minska-rorelse .vitva-blad, html.minska-rorelse .vitva-blad * { animation: none !important; transition: none !important; }
+/* ==== slut D ==== */
+
+/* ==== E: Ändra minne och tidslinjen ==== */
+/* --- minnessidan (spec §6.3 skärm 4): hjältefoto 430 px med slöja, ‹ och ✎ Ändra (44 px glas), typchip, rubrik, datum och plats --- */
+.andra-hjalte { height: 430px; min-height: 0; background: #5a2f3f; color: #fff; }
+.andra-hjalte > img { position: absolute; inset: 0; }
+.andra-hjalte::after { background: linear-gradient(180deg, rgba(var(--sloja),.35) 0%, rgba(var(--sloja),.05) 22%, rgba(var(--sloja),.62) 52%, rgba(var(--sloja),.82) 100%); }
+.andra-hjalte__knappar { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 4; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.andra-glasrund { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.92); color: #2b1a1d; box-shadow: 0 4px 14px rgba(0,0,0,.2); text-decoration: none; }
+.andra-glaspiller { margin-left: auto; height: 44px; padding: 0 16px; border: 0; border-radius: 22px; display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.92); color: #2b1a1d; font: 650 15px/1 var(--sans); box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.andra-hjalte__text { bottom: 22px; padding: 0 20px; }
+.andra-typchip { display: inline-block; padding: 6px 10px; border-radius: 8px; background: rgba(var(--sloja),.72); color: #fff; font: 700 11px/1.2 var(--sans); letter-spacing: .08em; }
+.andra-hjalte__text h1 { font: 400 34px/1.15 var(--serif); margin: 10px 0 8px; overflow-wrap: anywhere; }
+:root:lang(th) .andra-hjalte__text h1 { line-height: var(--serif-lh, 1.45); }
+.andra-hjalte__text .andra-meta { display: flex; flex-wrap: wrap; gap: 0 16px; font: 500 14px/1.3 var(--sans); opacity: 1; }
+.andra-meta__del { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; color: #fff; text-decoration: none; }
+a.andra-meta__del { min-height: 44px; margin-top: 0; font-weight: 500; text-shadow: none; }
+.andra-byline { margin: 6px 0 4px; font: 500 13px/1.4 var(--sans); color: var(--muted); }
+@media (min-width: 900px) { .andra-hjalte { height: 70vh; } .andra-hjalte__text h1 { font-size: 56px; } .andra-hjalte__knappar { left: 30px; right: 30px; top: 18px; } }
+
+/* --- Ändra minne: helskärm (spec §6.3 skärm 1) --- */
+html.andra-oppen, html.andra-oppen body { overflow: hidden; }
+.andra { position: fixed; inset: 0; z-index: 56; display: flex; flex-direction: column; background: var(--grupp); color: var(--ink); animation: andra-in var(--t-blad) var(--kurva) 1 both; outline: none; }
+@keyframes andra-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .andra { animation: none; } }
+html.minska-rorelse .andra { animation: none; }
+.andra-huvud { flex: 0 0 auto; min-height: 56px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: env(safe-area-inset-top, 0px) 8px 0; background: var(--grupp); border-bottom: 1px solid var(--line); }
+.andra-huvud h1 { font: 650 17px/1.35 var(--sans); white-space: nowrap; }
+.andra-avbryt { justify-self: start; min-height: 44px; min-width: 44px; padding: 0 10px; border: 0; background: none; color: var(--rose-text); font: 500 16px/1 var(--sans); }
+.andra-innehall { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 14px 16px 32px; -webkit-overflow-scrolling: touch; }
+.andra-innehall > * { max-width: 640px; margin-left: auto; margin-right: auto; }
+.andra-grupp .k-grupp-rubrik { margin: 20px 4px 8px; }
+.andra-hjalp { margin: 10px 4px 0; font: 500 12px/1.45 var(--sans); color: var(--muted); }
+.andra-dold { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+/* bildremsan: + Lägg till först, omslaget märkt; inga ta bort-knappar här */
+.andra-remsa { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px; }
+.andra-remsa::-webkit-scrollbar { display: none; }
+.andra-remsa > * { flex: 0 0 84px; width: 84px; height: 84px; border-radius: 14px; position: relative; overflow: hidden; }
+.andra-remsa__lagg { display: grid; place-items: center; align-content: center; gap: 4px; border: 1.5px dashed var(--rose-text); background: var(--surface); color: var(--rose-text); font: 600 12px/1.2 var(--sans); cursor: pointer; }
+.andra-remsa__ruta { background: var(--pink); }
+.andra-remsa__ruta img { width: 100%; height: 100%; object-fit: cover; }
+.andra-remsa__tom { display: grid; place-items: center; height: 100%; color: var(--rose-text); font-size: 22px; }
+.andra-remsa__film { position: absolute; right: 6px; top: 6px; padding: 2px 6px; border-radius: 8px; background: rgba(20,10,16,.72); color: #fff; font: 700 11px/1.2 var(--sans); }
+.andra-omslag { position: absolute; left: 6px; bottom: 6px; padding: 4px 7px; border-radius: 8px; background: #fff; color: #2b1a1d; font: 700 11px/1 var(--sans); }
+.andra-remsa__fot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 10px; margin: 2px 4px 0; font: 500 13px/1.3 var(--sans); color: var(--muted); }
+.andra-ordna { min-height: 44px; padding: 0; border: 0; background: none; color: var(--rose-text); font: 600 13px/1.3 var(--sans); text-align: right; }
+/* fält och rader */
+.andra-falt { position: relative; }
+.andra-falt--rubrik textarea { display: block; width: 100%; min-height: 54px; border: 0; background: transparent; color: var(--ink); font: 400 22px/1.3 var(--serif); padding: 12px 16px; border-radius: var(--r-lista); resize: none; overflow: hidden; }
+.andra-falt--berattelse textarea { display: block; width: 100%; min-height: 150px; border: 0; background: transparent; color: var(--ink); font: 400 17px/1.6 var(--serif); padding: 14px 16px; resize: vertical; border-radius: var(--r-lista); }
+.andra-falt input:focus-visible, .andra-falt textarea:focus-visible { outline: 2px solid var(--rose); outline-offset: -2px; }
+.andra-rad { width: 100%; border: 0; background: none; color: var(--ink); font: 500 15px/1.4 var(--sans); text-align: left; grid-template-columns: 32px auto minmax(0, 1fr) auto; cursor: pointer; }
+summary.andra-rad { list-style: none; grid-template-columns: 32px minmax(0, 1fr) auto; }
+.andra-rad[data-mer] { grid-template-columns: 32px minmax(0, 1fr) auto; }   /* MER: ikon, namn, pil – pilen i högerkanten */
+.andra-grupp[data-grupp="ta_bort"] { margin-top: 20px; }   /* utan rubrik: samma luft som de andra grupperna, inte ihop med MER */
+summary.andra-rad::-webkit-details-marker { display: none; }
+.andra-utseende[open] > summary .andra-chev { transform: rotate(90deg); }
+.andra-rad + .andra-rad::before { left: 58px; }
+.andra-rad__namn { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
+.andra-varde { justify-self: end; min-width: 0; max-width: 100%; color: var(--muted); font: 500 15px/1.4 var(--sans); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.andra-varde--tom { color: var(--rose-text); font-weight: 600; }
+.andra-chev { color: var(--muted); display: grid; place-items: center; }
+.andra-rad--typ { grid-template-columns: 32px minmax(0, 1fr); cursor: default; }
+.andra-rad--typ .k-seg { grid-column: 1 / -1; }
+.andra-seg > button { min-width: 0; padding: 0 6px; overflow-wrap: anywhere; line-height: 1.25; }
+.andra-fara { color: #b3261e; font-weight: 600; }
+:root[data-theme="dark"] .andra-fara { color: #ff8a80; }
+/* ändrat fält: rosa kant på 4 px och märket ÄNDRAD */
+.andra .andrad { box-shadow: inset 4px 0 0 var(--rosa); }
+.andra .k-grupp.andrad { box-shadow: inset 4px 0 0 var(--rosa), inset 0 0 0 1px var(--line); }
+.andra .andrad .andra-varde { color: var(--ink); font-weight: 600; }
+.andra-marke { display: inline-block; padding: 3px 6px; border-radius: 6px; background: var(--pink); color: var(--rose-text); font: 700 10px/1.2 var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.andra-falt > .andra-marke { position: absolute; top: 8px; right: 10px; z-index: 1; }
+.andra-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px 14px; }
+.andra-chips > .andra-marke { position: static; order: -1; flex-basis: 100%; width: max-content; max-width: max-content; }
+/* vem ser minnet */
+.andra-syn { position: relative; width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) 22px; gap: 12px; align-items: center; min-height: 54px; padding: 12px 14px; border: 0; background: none; color: var(--ink); text-align: left; }
+.andra-syn + .andra-syn::before { content: ''; position: absolute; left: 50px; right: 0; top: 0; border-top: 1px solid var(--line); }
+.andra-syn__text b { display: block; font: 600 15px/1.35 var(--sans); }
+.andra-syn__text small { display: block; font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.andra-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); }
+.andra-syn[aria-checked="true"] .andra-radio { border: 7px solid var(--rose); }
+/* förhandsvisningen: som ett stopp på tidslinjen */
+.andra-forhands { display: flex; align-items: center; gap: 14px; padding: 14px; --ring-glapp: var(--surface); }
+.andra-forhands__bild { width: 60px; height: 60px; }
+.andra-forhands__text { display: flex; flex-direction: column; min-width: 0; font: 600 14px/1.35 var(--sans); }
+.andra-forhands__text b { font-weight: 600; overflow-wrap: anywhere; }
+.andra-forhands__plats { display: flex; align-items: center; gap: 3px; font: 500 12px/1.4 var(--sans); color: var(--muted); }
+/* utseende (hopfällt) */
+.andra-utseende__innehall { padding: 4px 14px 16px; display: grid; gap: 12px; }
+.andra-stil { display: grid; gap: 6px; }
+.andra-stil__namn { font: 600 13px/1.3 var(--sans); color: var(--muted); }
+.andra-stil input[type="range"] { width: 100%; accent-color: var(--rose); }
+.andra-val { display: flex; flex-wrap: wrap; gap: 8px; }
+.andra-farg { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); padding: 0; }
+.andra-farg[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+/* utkast och krockar */
+.andra-utkast { margin-bottom: 12px; padding: 12px 14px; border-radius: var(--r-lista); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--rosa); font: 500 14px/1.45 var(--sans); }
+.andra-utkast__knappar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.andra-krockar:empty { display: none; }
+.andra-krockar { display: grid; gap: 8px; max-width: 640px; margin: 0 auto; padding-bottom: 10px; }
+.andra-krock { padding: 10px 12px; border-radius: 14px; background: var(--grupp); box-shadow: inset 0 0 0 1px var(--line); font: 500 13px/1.45 var(--sans); }
+.andra-krock__knappar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.andra-krock__knappar .k-knapp { white-space: normal; text-align: center; line-height: 1.25; }
+/* den fasta raden längst ner */
+.andra-spara { flex: 0 0 auto; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.06); }
+.andra-spara__rad { display: flex; align-items: center; gap: 12px; max-width: 640px; margin: 0 auto; }
+.andra-spara__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.andra-spara__antal { color: var(--ink); font-weight: 650; overflow-wrap: anywhere; }
+.andra-spara__knapp { flex: 0 0 auto; min-width: 104px; }
+.andra-spara__knapp:disabled { opacity: .45; cursor: default; }
+/* bekräftelsen "Göra minnet synligt för alla?" (skärm 3): två lika stora val */
+.andra-dlg h2 { font: 400 23px/1.25 var(--serif); margin-bottom: 4px; }
+.andra-dlg__ingress { font: 500 14px/1.45 var(--sans); color: var(--muted); margin: 4px 0 12px; }
+.andra-dlg__lista { list-style: none; display: grid; gap: 8px; margin-bottom: 14px; }
+.andra-dlg__lista li { display: flex; gap: 10px; align-items: flex-start; font: 500 14px/1.4 var(--sans); }
+.andra-dlg__lista li .ikon { color: var(--rose-text); margin-top: 1px; }
+.andra-dlg__knappar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.andra-fraga { width: min(420px, 92vw); }
+.andra-fraga .dlg__knappar { display: grid; grid-template-columns: 1fr 1fr; }
+.andra-fraga .knapp { min-height: 48px; font-size: 15px; }
+.andra-varning { display: grid; justify-items: start; gap: 2px; border-radius: 14px; background: #fff4d6; color: #4d3900; padding: 12px; font: 500 13px/1.45 var(--sans); margin-bottom: 16px; }
+.andra-varning button { margin-top: 8px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #5c4400; color: #fff; font: 700 13px/1.2 var(--sans); }
+:root[data-theme="dark"] .andra-varning { background: #3a2e10; color: #f5dc9a; }
+:root[data-theme="dark"] .andra-varning button { background: #f5dc9a; color: #3a2e10; }
+
+/* --- platsbladet (skärm 2): sökfält 48 px, fri text, era platser – ingen position, ingen karttjänst --- */
+.platsval { padding: 0 16px; }
+.platsval-huvud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 52px; margin: 0 -8px; }
+.platsval-huvud h2 { font: 650 17px/1.35 var(--sans); }
+.platsval-avbryt, .platsval-klar { min-height: 44px; min-width: 44px; padding: 0 10px; border: 0; background: none; color: var(--rose-text); font: 500 16px/1 var(--sans); }
+.platsval-avbryt { justify-self: start; } .platsval-klar { justify-self: end; font-weight: 700; }
+.platsval-innehall { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding-top: 4px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }   /* luft för sökfältets fokusram */
+.platsval-falt { position: relative; display: block; margin: 0 3px; color: var(--muted); }
+.platsval-falt > .ikon { position: absolute; left: 14px; top: 14px; pointer-events: none; }
+.platsval-sok { display: block; width: 100%; height: 48px; padding: 0 48px 0 44px; border-radius: 14px; background: var(--grupp); border: 1.5px solid var(--rose); color: var(--ink); font: 400 16px/1 var(--sans); }
+.platsval-sok:focus-visible { outline: 2px solid var(--rose); outline-offset: 1px; }
+.platsval-fritext, .platsval-ingen { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--rose-text); font: 500 15px/1.35 var(--sans); text-align: left; }
+.platsval-fritext[hidden] { display: none; }
+.platsval-ingen { color: var(--ink); }
+.platsval-rubrik { display: block; margin: 18px 0 4px; }
+.platsval-rad { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; min-height: 60px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); text-align: left; }
+.platsval-tummar { display: flex; }
+.platsval-tummar > * { width: 30px; height: 40px; border-radius: 8px; border: 2px solid var(--bg); display: block; object-fit: cover; background: var(--pink); }
+.platsval-tummar > * + * { margin-left: -10px; }
+.platsval-tummar--1 > *, .platsval-tummar--0 > * { width: 40px; }   /* en ensam bild är hel */
+.platsval-tummar--0 > i { display: grid; place-items: center; color: var(--rose-text); }
+.platsval-rensa { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 12px; background: none; color: var(--muted); cursor: pointer; }
+.platsval-rensa[hidden] { display: none; }
+.platsval-rensa:focus-visible { outline: 2px solid var(--rose); outline-offset: -2px; }
+.platsval-text { display: flex; flex-direction: column; min-width: 0; }
+.platsval-text b { font: 600 15px/1.3 var(--sans); overflow-wrap: anywhere; }
+.platsval-text small { font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.platsval-bock { color: var(--rose-text); }
+.platsval-hjalp { margin: 12px 0; font: 500 14px/1.45 var(--sans); color: var(--muted); }
+.platsval-anm { display: flex; gap: 8px; margin-top: 16px; font: 500 12px/1.45 var(--sans); color: var(--muted); }
+
+/* --- tidslinjens huvud: Tidslinje, Väg | Lista | Kalender och filtren (spec §6.4) --- */
+.vag-titel { margin-bottom: 12px; }
+.vag-seg > a { min-height: var(--tryck); border-radius: 10px; display: grid; place-items: center; font: 600 14px/1.2 var(--sans); color: var(--muted); text-decoration: none; text-align: center; padding: 0 6px; }
+.vag-seg > a[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.vag-filter { margin-top: 12px; padding-bottom: 2px; }
+.vag-filter a.k-chip { text-decoration: none; }
+.vag-platsknapp > span:first-of-type { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.vag-platser .platslista { margin-top: 12px; }
+.platslista a.pa { border-color: var(--rose); box-shadow: inset 0 0 0 1px var(--rose); }
+.kal__manad { font: 400 28px/1.15 var(--serif); }
+@media (min-width: 900px) { .kal__manad { font-size: 36px; } }
+
+/* --- Lista (spec §6.4 skärm 2): nyast först, Kommande överst, NU-linjen, månadsrubriker, rader på 84 px --- */
+.lista { margin-top: 6px; }
+.lista-kommande, .lista-manad { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; margin: 22px 0 6px; font: 400 22px/1.25 var(--serif); }
+.lista-manad small { font: 500 13px/1.3 var(--sans); color: var(--muted); }
+.lista-rad { position: relative; display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 14px; align-items: center; min-height: 84px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.lista-rad__omslag { position: relative; width: 68px; height: 68px; border-radius: 14px; background: var(--pink); display: grid; place-items: center; }
+.lista-rad__omslag img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.lista-rad__omslag--traff { background: var(--moln-bg); border: 2px dashed var(--moln); color: var(--moln-text); }
+.lista-rad__tom { color: var(--rose-text); font-size: 22px; }
+.lista-typ { position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--rose); color: #fff; box-shadow: 0 0 0 2px var(--bg); }
+.lista-syn { position: absolute; left: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 2px var(--bg), 0 1px 3px rgba(0,0,0,.2); }
+.lista-rad__text { min-width: 0; }
+.lista-rad__lank { display: flex; flex-direction: column; justify-content: center; min-height: 44px; color: inherit; text-decoration: none; }
+.lista-rad__lank::after { content: ''; position: absolute; inset: 0; }
+.lista-rad__lank:focus-visible { outline: none; }
+.lista-rad__lank:focus-visible::after { outline: 2px solid var(--rose); outline-offset: -2px; border-radius: 12px; }
+.lista-rad--traff .lista-rad__datum { color: var(--moln-text); }
+.lista-rad__titel { font: 600 15px/1.35 var(--sans); color: var(--ink); overflow-wrap: anywhere; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lista-rad__meta { display: flex; flex-wrap: nowrap; align-items: center; gap: 0 4px; min-width: 0; font: 500 13px/1.45 var(--sans); color: var(--muted); }
+.lista-rad__var { display: inline-flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 0; }   /* nålen + platsen: krymper, aldrig isär */
+.lista-rad__var > .ikon, .lista-rad__var > svg { flex: none; }
+.lista-rad__plats { min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lista-rad__antal { flex: none; white-space: nowrap; }
+.lista-lagg-plats { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 44px; margin: -13px 0; color: var(--rose-text); font-weight: 600; text-decoration: none; }
+.lista-nu { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; font: 700 12px/1.3 var(--sans); color: var(--rose-text); letter-spacing: .06em; text-transform: uppercase; }
+.lista-nu::before, .lista-nu::after { content: ''; flex: 1; height: 2px; background: var(--rose); border-radius: 1px; }
+/* ==== slut E ==== */
+
+/* ==== F: navigering och inställningar ==== */
+/* Omdesignen 2026-10, paket F (docs/specs/2026-10-02-omdesign.md §2, §5, §6.5, §6.7, §6.10). Allt nås med tummen: sidhuvudet är
+   en rad, flikraden ligger längst ner, tryckytor ≥ 44 px, fält 16 px. Kontrasten är mätt i båda temana (tests/navigering.test.js,
+   tests/installningar.test.js). Ingen emoji som gränssnittsikon – bara VL.ikon. */
+
+/* --- sidhuvudet: ♥ (klocka.js) och rundlarna får 44 × 44; min rundel är 32 px med ring --- */
+.top .klocka { width: var(--tryck); height: var(--tryck); padding: 0; display: grid; place-items: center; border-radius: 50%; }
+.top .klocka .klocka__antal { top: 5px; right: 3px; box-shadow: 0 0 0 2px var(--bg); }
+.top .klocka:active, .topp-profil:active { background: var(--line); }
+.topp-profil { width: var(--tryck); height: var(--tryck); padding: 0; border-radius: 50%; background: none; display: grid; place-items: center; }
+.topp-profil .av__bokstav, .topp-profil .av__bild { width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--rose); }
+.topp-profil .av__bokstav { display: grid; place-items: center; background: var(--rose); color: #fff; font: 700 14px/1 var(--sans); }
+.topp-profil .av__bild { inset: 6px; }
+/* den andra syns i sidhuvudet bara när hon/han är inne i appen just nu (grön ring) – sidhuvudet håller sig till en rad */
+.top .av--narvaro { width: var(--tryck); height: var(--tryck); border: 0; background: none; box-shadow: none; }
+.top .av--narvaro:not(.ar-inne) { display: none; }
+.top .av--narvaro .av__bokstav { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--pink); color: var(--rose-text); font: 700 14px/1 var(--sans); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px #2fb36b; }
+.top .av--narvaro .av__bild { inset: 6px; width: 32px; height: 32px; box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px #2fb36b; }
+.top .av--narvaro .prick { right: 4px; bottom: 4px; }
+
+/* --- flikraden längst ner: Hem · Tidslinje · ＋ · Frågor · Träffar (besökare och gäster: Tidslinje · Om oss · Logga in/Meny) ---
+   64 px + iPhones säkerhetsmarginal (hemskärmsappen). Den ligger i sidhuvudet (som inte har något filter) och är fast mot skärmen. */
+body.flikrad-syns { padding-bottom: calc(var(--flikrad-h) + env(safe-area-inset-bottom, 0px)); }
+.flikrad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1; height: calc(var(--flikrad-h) + env(safe-area-inset-bottom, 0px));
+  padding: 0 max(0px, calc((100% - 560px) / 2)) env(safe-area-inset-bottom, 0px); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start;
+  background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+.flikrad--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+:root[data-theme="dark"] .flikrad { background: rgba(22,16,26,.94); }
+.flikrad-flik { position: relative; min-width: 0; height: var(--flikrad-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; border: 0; border-radius: 0;
+  background: none; color: var(--flik-av); font: 600 11px/1.25 var(--sans); text-align: center; text-decoration: none; white-space: normal; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.flikrad-flik[aria-current="page"] { color: var(--rose-text); }
+.flikrad-flik:focus-visible { outline: 3px solid var(--rose-text); outline-offset: -5px; border-radius: 14px; }
+.flikrad-text { display: block; max-width: 100%; overflow-wrap: anywhere; }
+:root:lang(th) .flikrad-text { line-height: 1.45; }
+.flikrad .k-marke { top: 6px; right: calc(50% - 24px); }
+.flikrad-ny__knapp { width: 54px; height: 54px; margin-top: -6px; border-radius: 18px; background: var(--rose); color: #fff; display: grid; place-items: center; box-shadow: 0 8px 20px rgba(125,29,63,.35); transition: transform var(--t-snabb) var(--kurva); }
+.flikrad-ny:active .flikrad-ny__knapp { transform: scale(.94); }
+/* det som ligger fast längst ner på sidan hamnar ovanför flikraden */
+body.flikrad-syns .toast { bottom: calc(var(--flikrad-h) + env(safe-area-inset-bottom, 0px) + 12px); }
+body.flikrad-syns .app-tips { bottom: calc(var(--flikrad-h) + env(safe-area-inset-bottom, 0px) + 10px); }
+
+/* --- profilmenyn (och besökarens inställningsmeny): rader på minst 44 px, ovanför flikraden --- */
+.top .meny--profil { width: min(292px, calc(100vw - 16px)); padding: 6px; max-height: calc(100vh - var(--topp-h) - var(--flikrad-h) - env(safe-area-inset-bottom, 0px) - 16px);
+  max-height: calc(100dvh - var(--topp-h) - var(--flikrad-h) - env(safe-area-inset-bottom, 0px) - 16px); }
+.top .meny--profil button, .top .meny--profil a { min-height: var(--tryck); }
+.top .meny .meny__rad { display: flex; align-items: center; gap: 12px; width: 100%; padding: 0 12px; text-align: left; font-size: 15px; }
+.top .meny .meny__rad > span { flex: 1 1 auto; min-width: 0; }
+.top .meny .meny__rad .ikon { color: var(--rose-text); }
+.top .meny .meny__rad--mer .ikon:last-child { color: var(--muted); }
+.top .meny .meny__sprak { margin: 4px 8px 6px; }
+.top .meny .fara .ikon { color: inherit; }
+
+/* --- Bakgrund (profilmenyn → Bakgrund, och bildknappen på Vi två-kortet) – skissen final_bakgrund skärm 1 --- */
+.bakgrund-mini { position: relative; width: 176px; height: 300px; margin: 6px auto 0; border-radius: 26px; border: 6px solid #2b1a1d; background: var(--bg); overflow: hidden; }
+:root[data-theme="dark"] .bakgrund-mini { border-color: #4f3a44; }
+.bakgrund-mini__mos { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--kol, 3), 1fr); grid-template-rows: repeat(var(--rad, 4), 1fr); }
+.bakgrund-mini__mos img { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.bakgrund-mini__ton { display: block; background: linear-gradient(160deg, #e9c9b5, #c98aa0); }
+.bakgrund-mini__ton--1 { background: linear-gradient(160deg, #b9d3e8, #7a9fc2); }
+.bakgrund-mini__ton--2 { background: linear-gradient(160deg, #d6e4c4, #93b089); }
+.bakgrund-mini__ton--3 { background: linear-gradient(160deg, #f1d9a8, #d49a63); }
+.bakgrund-mini__ton--4 { background: linear-gradient(160deg, #d9c6e6, #9a7fb8); }
+.bakgrund-mini__ton--5 { background: linear-gradient(160deg, #f3c1cf, #c0567a); }
+.bakgrund-mini__ord { position: absolute; top: 10px; left: 10px; padding: 3px 6px; border-radius: 6px; font: 400 12px/1.2 var(--serif); color: var(--ink); }
+.bakgrund-mini--platta .bakgrund-mini__ord { background: var(--platta); }
+.bakgrund-mini__kort { position: absolute; left: 10px; right: 10px; border-radius: 10px; background: var(--surface); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+.bakgrund-mini__kort--1 { top: 36px; height: 92px; }
+.bakgrund-mini__kort--2 { top: 138px; height: 60px; }
+.bakgrund-mini__kort--3 { top: 208px; height: 74px; }
+.bakgrund-mini-text { margin: 10px 20px 0; text-align: center; font: 500 13px/1.45 var(--sans); color: var(--muted); }
+.bakgrund-antal { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.bakgrund-antal button { min-height: 64px; min-width: 0; padding: 6px 0; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); display: grid; place-items: center; align-content: center; gap: 6px; font: 650 13px/1.2 var(--sans); cursor: pointer; }
+.bakgrund-antal button[aria-checked="true"] { border-color: var(--rose); background: var(--pink); color: var(--rose-text); }
+.bakgrund-antal button:focus-visible, .bakgrund-spar:focus-visible { outline: 3px solid var(--rose-text); outline-offset: 2px; }
+.bakgrund-ruta { display: grid; grid-template-columns: repeat(var(--k, 1), 1fr); grid-auto-rows: 1fr; gap: 1.5px; width: 20px; height: 20px; }
+.bakgrund-ruta i { background: currentColor; border-radius: 1px; opacity: .8; }
+.bakgrund-ruta--inga { display: grid; place-items: center; }
+.bakgrund-ruta--inga::before { content: ''; width: 12px; height: 2px; border-radius: 1px; background: currentColor; }
+.bakgrund-reglage { padding: 16px; }
+.bakgrund-reglage__rad { display: flex; justify-content: space-between; gap: 12px; font: 600 15px/1.3 var(--sans); }
+.bakgrund-varde { color: var(--rose-text); white-space: nowrap; }
+.bakgrund-reglage__spar { position: relative; margin-top: 4px; }
+.bakgrund-spar { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: var(--tryck); margin: 0; background: transparent; cursor: pointer; }
+.bakgrund-spar::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--rose) calc(var(--fyll, 0) * 100%), var(--line) 0); }
+.bakgrund-spar::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -11.5px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.bakgrund-spar::-moz-range-track { height: 5px; border-radius: 3px; background: var(--line); }
+.bakgrund-spar::-moz-range-progress { height: 5px; border-radius: 3px; background: var(--rose); }
+.bakgrund-spar::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.bakgrund-markor { position: absolute; top: 12.5px; left: calc(14px + var(--grans, .33) * (100% - 28px) - 1px); width: 2px; height: 19px; border-radius: 1px; background: var(--ink); pointer-events: none; }
+.bakgrund-reglage__skala { display: flex; justify-content: space-between; gap: 12px; }
+.bakgrund-reglage__skala small { font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.bakgrund-info { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--grupp); font: 500 13px/1.45 var(--sans); color: var(--ink); }
+.bakgrund-info .ikon { margin-top: 1px; }
+.bakgrund-foto__bild { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(160deg, #e7b78f, #8a2348 60%, #5a2f1f); }
+.bakgrund-foto__bild--foto { background-size: cover; background-position: center; }
+.bakgrund-foto__bild--foto .ikon { display: none; }
+
+/* --- helskärmsvyerna (Bakgrund, Dagens frågor, Notiser): grupperade listor i iOS-stil --- */
+.inst-vy { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--grupp); color: var(--ink);
+  overflow-y: auto; overscroll-behavior: contain; animation: inst-in var(--t-blad) var(--kurva) 1 both; }
+.inst-vy::backdrop { background: var(--grupp); }
+@keyframes inst-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.inst-huvud { position: sticky; top: 0; z-index: 2; min-height: var(--topp-h); display: grid; grid-template-columns: var(--tryck) minmax(0, 1fr) var(--tryck); align-items: center; gap: 4px; padding: 0 6px; background: var(--grupp); border-bottom: 1px solid var(--line); }
+.inst-huvud h2 { font: 650 17px/1.3 var(--sans); text-align: center; overflow-wrap: anywhere; }
+.inst-innehall { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
+.inst-rad { width: 100%; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; grid-template-columns: minmax(0, 1fr) auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.inst-rad--ikon { grid-template-columns: auto minmax(0, 1fr) auto; }
+.inst-rad:disabled { cursor: default; }
+/* aria-checked sitter på raden (role="switch"/"radio") – växeln i raden följer den */
+.inst-rad[aria-checked="true"] > .k-vaxel { background: var(--rose); }
+.inst-rad[aria-checked="true"] > .k-vaxel::after { left: 22px; }
+.inst-rad:disabled .k-vaxel, .inst-rad:disabled .inst-radio { opacity: .45; }
+.inst-rad:focus-visible, .inst-val:focus-visible { outline: 3px solid var(--rose-text); outline-offset: -3px; }
+.inst-rad__text { min-width: 0; overflow-wrap: anywhere; }
+.inst-rad__text b, .inst-rad__rubrik { display: block; font: 600 15px/1.3 var(--sans); }
+.inst-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--flik-av); }
+.inst-rad[aria-checked="true"] .inst-radio { border: 7px solid var(--rose); }
+.inst-val { max-width: min(46vw, 210px); min-width: var(--tryck); min-height: var(--tryck); padding: 0 6px; border: 0; border-radius: 10px; background: none; color: var(--muted); font: 500 16px/1.2 var(--sans); text-align: right; text-align-last: right; cursor: pointer; }
+.inst-val:disabled { cursor: default; }
+.inst-pausat { display: block; width: fit-content; margin: -4px 16px 12px; padding: 3px 8px; border-radius: 8px; background: var(--grupp); color: var(--muted); font: 600 12px/1.35 var(--sans); }
+.inst-pausat + .k-rad::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; border-top: 1px solid var(--line); }   /* avdelaren efter Sex 18+ */
+.inst-niva-ruta { padding: 14px 16px 12px; }
+.inst-niva { margin-top: 10px; }
+.inst-niva button:disabled { cursor: default; }
+.inst-tips { display: block; margin-top: 8px; font: 500 13px/1.35 var(--sans); color: var(--muted); }
+.inst-fot { margin: 8px 4px 0; font: 500 13px/1.45 var(--sans); color: var(--muted); }
+.inst-snart { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: 500 14px/1.45 var(--sans); color: var(--ink); }
+.inst-telefon { grid-template-columns: auto minmax(0, 1fr); font: 600 15px/1.3 var(--sans); }   /* linjeikon + text (notis.js) */
+.inst-telefon > .ikon { color: var(--rose-text); }
+/* SÅ SER NOTISEN UT: en låsskärmsnotis med serverns fasta text */
+.inst-prov { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; align-items: center; padding: 12px; border-radius: 18px; background: rgba(240,240,245,.92); color: #1c1c1e; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+:root[data-theme="dark"] .inst-prov { background: rgba(60,60,67,.92); color: #fff; }
+.inst-prov__app { width: 38px; height: 38px; border-radius: 9px; background: #7d1d3f; color: #fff; display: grid; place-items: center; font: 400 15px/1 var(--serif); }
+.inst-prov__text b { display: block; font: 650 14px/1.3 var(--sans); }
+.inst-prov__text span { font: 500 14px/1.3 var(--sans); }
+
+/* --- bladen nerifrån: samtycket för Sex 18+ (skärm 5) och tidszonsfrågan --- */
+.inst-ark { margin: auto auto 0; width: 100%; max-width: 640px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; border: 0; border-radius: var(--r-blad) var(--r-blad) 0 0; padding: 8px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg); color: var(--ink); box-shadow: 0 -10px 40px rgba(0,0,0,.3); animation: k-blad-in var(--t-blad) var(--kurva) 1 both; }
+.inst-ark::backdrop { background: rgba(20,8,14,.5); }
+.inst-ark .k-blad__handtag { margin-bottom: 12px; }
+.inst-ark h2 { font: 400 25px/1.25 var(--serif); margin: 4px 0 8px; }
+:root:lang(th) .inst-ark h2 { line-height: 1.45; }
+.inst-regler { list-style: none; display: grid; gap: 10px; margin: 14px 0 4px; }
+.inst-regler li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; font: 500 14px/1.45 var(--sans); }
+.inst-regler li .ikon { color: var(--rose-text); margin-top: 1px; }
+.inst-ark__fraga { font: 500 16px/1.5 var(--sans); margin: 6px 0 2px; }
+.inst-ark__knappar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.inst-ark__knappar .k-knapp { min-height: 52px; border-radius: 16px; padding: 0 12px; text-align: center; line-height: 1.2; }
+
+/* minska rörelse: av i systemet ELLER html.minska-rorelse (testerna sätter klassen) */
+@media (prefers-reduced-motion: reduce) { .inst-vy, .inst-ark, .flikrad-ny__knapp { animation: none !important; transition: none !important; } }
+html.minska-rorelse .inst-vy, html.minska-rorelse .inst-ark, html.minska-rorelse .flikrad-ny__knapp { animation: none !important; transition: none !important; }
+/* ==== slut F ==== */
